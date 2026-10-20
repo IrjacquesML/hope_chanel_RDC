@@ -1,0 +1,113 @@
+import { Link } from 'react-router-dom';
+import Logo from './Logo';
+import { Facebook, Instagram, Lock, Mail, MapPin, Phone, WhatsApp, XIcon, YouTube } from './Icons';
+import { useLang } from '../i18n/LanguageContext';
+import content from '../data/content.json';
+
+const SOCIALS = [
+  { key: 'youtube', label: 'YouTube', Icon: YouTube },
+  { key: 'facebook', label: 'Facebook', Icon: Facebook },
+  { key: 'instagram', label: 'Instagram', Icon: Instagram },
+  { key: 'x', label: 'X', Icon: XIcon },
+  { key: 'whatsapp', label: 'WhatsApp', Icon: WhatsApp },
+];
+
+function Col({ title, links }) {
+  return (
+    <div>
+      <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-accent">{title}</h2>
+      <ul className="mt-4 space-y-2.5">
+        {links.map(([label, to]) => (
+          <li key={to}>
+            <Link to={to} className="text-white/80 transition hover:text-white hover:underline">{label}</Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default function Footer() {
+  const { t } = useLang();
+  const { contact, social } = content;
+  return (
+    <footer className="bg-brand-dark text-white">
+      <div className="container-page grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-4">
+        <div className="lg:col-span-1">
+          <Link to="/" aria-label="Hope Chanel RDC — Accueil"><Logo onDark /></Link>
+          <address className="mt-6 space-y-3 text-sm not-italic text-white/80">
+            <p className="flex gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" />{contact.address}</p>
+            {contact.phones.map((p) => (
+              <p key={p} className="flex gap-2">
+                <Phone className="h-4 w-4 shrink-0 text-accent" />
+                <a href={`tel:${p.replace(/\s/g, '')}`} className="hover:text-white">{p}</a>
+              </p>
+            ))}
+            <p className="flex gap-2">
+              <Mail className="h-4 w-4 shrink-0 text-accent" />
+              <a href={`mailto:${contact.email}`} className="hover:text-white">{contact.email}</a>
+            </p>
+          </address>
+        </div>
+
+        <Col
+          title={t('footer.explore')}
+          links={[
+            [t('nav.live'), '/regarder'],
+            [t('nav.week'), '/programme?vue=semaine'],
+            [t('nav.shows'), '/emissions'],
+            [t('nav.events'), '/evenements'],
+            [t('common.donate'), '/dons'],
+          ]}
+        />
+        <Col
+          title={t('footer.info')}
+          links={[
+            [t('footer.faq'), '/faq'],
+            [t('footer.privacy'), '/confidentialite'],
+            [t('footer.terms'), '/conditions'],
+            [t('nav.contact'), '/contact'],
+          ]}
+        />
+        <div>
+          <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-accent">{t('footer.about')}</h2>
+          <p className="mt-4 text-sm text-white/80">{t('footer.aboutText')}</p>
+          <ul className="mt-4 space-y-2.5">
+            {[[t('nav.team'), '/apropos#equipe'], [t('nav.news'), '/actualites'], [t('nav.network'), '/reseau']].map(([l, to]) => (
+              <li key={to}><Link to={to} className="text-white/80 hover:text-white hover:underline">{l}</Link></li>
+            ))}
+          </ul>
+          <p className="mt-6 text-sm font-semibold">{t('footer.follow')}</p>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {SOCIALS.map(({ key, label, Icon }) => (
+              <li key={key}>
+                <a
+                  href={social[key]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Hope Chanel RDC sur ${label}`}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:-translate-y-0.5 hover:bg-accent hover:text-ink"
+                >
+                  <Icon />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <div className="border-t border-white/10">
+        <div className="container-page flex flex-col items-center justify-between gap-3 py-5 text-sm text-white/70 sm:flex-row">
+          <p>© 2026 Hope Chanel RDC. {t('footer.rights')}</p>
+          <Link
+            to="/admin"
+            rel="nofollow"
+            className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 ring-1 ring-white/20 transition hover:bg-white/10 hover:text-white"
+          >
+            <Lock className="h-4 w-4" />
+            {t('footer.admin')}
+          </Link>
+        </div>
+      </div>
+    </footer>
+  );
+}

@@ -1,0 +1,616 @@
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import Logo from '../components/Logo';
+import { Close, MenuIcon } from '../components/Icons';
+import CollectionEditor from './CollectionEditor';
+import ScheduleEditor from './ScheduleEditor';
+import Stats from './Stats';
+import { Field, getPath, setPath, slugify } from './fields';
+import { api } from './api';
+import { formatDate, liveSource, parseYouTube } from '../lib';
+
+/* ---------------------------------------------------------------- */
+/* Définition des sections                                          */
+/* ---------------------------------------------------------------- */
+
+const today = () => new Date().toISOString().slice(0, 10);
+const uid = (prefix) => `${prefix}-${Date.now().toString(36)}`;
+const fr = (v) => (v && typeof v === 'object' ? v.fr : v) || '';
+
+function buildSections(data) {
+  const { shows: showsFile, content, schedule } = data;
+  const showOptions = showsFile.shows.map((s) => ({ value: s.slug, label: s.title }));
+  const catOptions = showsFile.categories.map((c) => ({ value: c.id, label: c.label.fr }));
+  const showTitle = (slug) => showsFile.shows.find((s) => s.slug === slug)?.title || slug;
+  const usedInSchedule = (slug) => Object.values(schedule.templates).some((slots) => slots.some((s) => s.show === slug));
+
+  return {
+    shows: {
+      label: 'Émissions',
+      file: 'shows',
+      key: 'shows',
+      editor: {
+        title: 'Émissions',
+        description: 'Les 4 premières émissions « À la une » apparaissent dans le carrousel ; les 4 premières « Temps forts » dans la grille de l’accueil. L’ordre de la liste est celui du site.',
+        idKey: 'slug',
+        sortable: true,
+        fields: [
+          { name: 'title', label: 'Titre', required: true },
+          { name: 'slug', label: 'Identifiant (URL)', immutable: true, hint: 'Généré depuis le titre si vide. Ex. : reveil-d-espoir', pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/, patternMessage: 'Minuscules, chiffres et tirets uniquement' },
+          { name: 'category', label: 'Catégorie', type: 'select', options: catOptions, required: true },
+          { name: 'host', label: 'Présentateur·rice' },
+          { name: 'featured', label: 'À la une (carrousel)', type: 'checkbox' },
+          { name: 'highlight', label: 'Temps fort de la semaine', type: 'checkbox' },
+          { name: 'image', label: 'Image (16:9)', type: 'image', required: true },
+          { name: 'tagline', label: 'Accroche', type: 'i18n', required: true },
+          { name: 'description', label: 'Description', type: 'i18nText', required: true },
+        ],
+        makeNew: () => ({ slug: '', title: '', category: catOptions[0]?.value, featured: false, highlight: false, image: '', host: '', tagline: { fr: '', en: '' }, description: { fr: '', en: '' } }),
+        beforeSave: (item, isNew) => (isNew && !item.slug ? { ...item, slug: slugify(item.title) } : item),
+        summary: (s) => ({
+          title: s.title,
+          subtitle: `${catOptions.find((c) => c.value === s.category)?.label || s.category} · ${showsFile.episodes.filter((e) => e.show === s.slug).length} épisode(s)`,
+          image: s.image,
+          badges: [s.featured && 'À la une', s.highlight && 'Temps fort'].filter(Boolean),
+        }),
+        canDelete: (s) => {
+          const n = showsFile.episodes.filter((e) => e.show === s.slug).length;
+          if (n) return `Impossible : « ${s.title} » a encore ${n} épisode(s). Supprimez-les ou réaffectez-les d’abord.`;
+          if (usedInSchedule(s.slug)) return `Impossible : « ${s.title} » est utilisée dans le programme. Retirez-la de la grille d’abord.`;
+          return null;
+        },
+      },
+    },
+    episodes: {
+      label: 'Épisodes',
+      file: 'shows',
+      key: 'episodes',
+      editor: {
+        title: 'Épisodes',
+        description: 'Les 8 plus récents apparaissent dans « Derniers épisodes » sur l’accueil. Avec un identifiant YouTube, l’épisode est lisible sur la page de l’émission.',
+        fields: [
+          { name: 'show', label: 'Émission', type: 'select', options: showOptions, required: true },
+          { name: 'id', label: 'Identifiant', immutable: true, hint: 'Généré automatiquement si vide.' },
+          { name: 'title', label: 'Titre', type: 'i18n', required: true },
+          { name: 'summary', label: 'Résumé', type: 'i18nText', required: true },
+          { name: 'date', label: 'Date de diffusion', type: 'date', required: true },
+          { name: 'duration', label: 'Durée', placeholder: '28:30', required: true, pattern: /^(\d{1,2}:)?\d{1,2}:\d{2}$/, patternMessage: 'Format mm:ss ou h:mm:ss' },
+          { name: 'youtubeId', label: 'Identifiant vidéo YouTube', hint: 'La partie après « v= » dans l’URL YouTube.' },
+          { name: 'image', label: 'Vignette (16:9)', type: 'image', required: true },
+        ],
+        makeNew: () => ({ id: '', show: showOptions[0]?.value, title: { fr: '', en: '' }, summary: { fr: '', en: '' }, duration: '', date: today(), image: '', youtubeId: '' }),
+        beforeSave: (item, isNew) => (isNew && !item.id ? { ...item, id: uid(item.show.slice(0, 3)) } : item),
+        sortItems: (a, b) => b.date.localeCompare(a.date),
+        filters: [{ label: 'Émission', options: showOptions, test: (e, v) => e.show === v }],
+        summary: (e) => ({ title: fr(e.title), subtitle: `${showTitle(e.show)} · ${formatDate(e.date, 'fr')} · ${e.duration}`, image: e.image, badges: e.youtubeId ? ['Vidéo'] : [] }),
+      },
+    },
+    categories: {
+      label: 'Catégories',
+      file: 'shows',
+      key: 'categories',
+      editor: {
+        title: 'Catégories',
+        description: 'Utilisées pour filtrer les émissions.',
+        sortable: true,
+        fields: [
+          { name: 'label', label: 'Nom', type: 'i18n', required: true },
+          { name: 'id', label: 'Identifiant', immutable: true, hint: 'Généré depuis le nom si vide.' },
+        ],
+        makeNew: () => ({ id: '', label: { fr: '', en: '' } }),
+        beforeSave: (item, isNew) => (isNew && !item.id ? { ...item, id: slugify(item.label.fr) } : item),
+        summary: (c) => ({ title: c.label.fr, subtitle: `${c.label.en || '—'} · ${showsFile.shows.filter((s) => s.category === c.id).length} émission(s)` }),
+        canDelete: (c) => (showsFile.shows.some((s) => s.category === c.id) ? `Impossible : des émissions utilisent la catégorie « ${c.label.fr} ».` : null),
+      },
+    },
+    schedule: { label: 'Programme', custom: 'schedule' },
+    events: {
+      label: 'Événements',
+      file: 'content',
+      key: 'events',
+      editor: {
+        title: 'Événements',
+        fields: [
+          { name: 'title', label: 'Titre', type: 'i18n', required: true },
+          { name: 'date', label: 'Date', type: 'date', required: true },
+          { name: 'time', label: 'Heure', type: 'time', required: true },
+          { name: 'place', label: 'Lieu', required: true, wide: true },
+          { name: 'summary', label: 'Description', type: 'i18nText', required: true },
+          { name: 'image', label: 'Image', type: 'image' },
+        ],
+        makeNew: () => ({ id: uid('evt'), date: today(), time: '10:00', place: '', image: '', title: { fr: '', en: '' }, summary: { fr: '', en: '' } }),
+        sortItems: (a, b) => a.date.localeCompare(b.date),
+        summary: (e) => ({ title: fr(e.title), subtitle: `${formatDate(e.date, 'fr')} · ${e.time} · ${e.place}`, image: e.image, badges: e.date < today() ? ['Passé'] : [] }),
+      },
+    },
+    news: {
+      label: 'Actualités',
+      file: 'content',
+      key: 'news',
+      editor: {
+        title: 'Actualités',
+        fields: [
+          { name: 'title', label: 'Titre', type: 'i18n', required: true },
+          { name: 'date', label: 'Date', type: 'date', required: true },
+          { name: 'summary', label: 'Texte', type: 'i18nText', required: true },
+          { name: 'image', label: 'Image', type: 'image' },
+        ],
+        makeNew: () => ({ id: uid('news'), date: today(), image: '', title: { fr: '', en: '' }, summary: { fr: '', en: '' } }),
+        sortItems: (a, b) => b.date.localeCompare(a.date),
+        summary: (n) => ({ title: fr(n.title), subtitle: formatDate(n.date, 'fr'), image: n.image }),
+      },
+    },
+    team: {
+      label: 'Équipe',
+      file: 'content',
+      key: 'team',
+      editor: {
+        title: 'Équipe',
+        idKey: 'name',
+        sortable: true,
+        fields: [
+          { name: 'name', label: 'Nom', required: true },
+          { name: 'role', label: 'Fonction', type: 'i18n', required: true },
+          { name: 'image', label: 'Photo (carrée)', type: 'image' },
+        ],
+        makeNew: () => ({ name: '', role: { fr: '', en: '' }, image: '' }),
+        summary: (m) => ({ title: m.name, subtitle: fr(m.role), image: m.image }),
+      },
+    },
+    testimonials: {
+      label: 'Témoignages',
+      file: 'content',
+      key: 'testimonials',
+      editor: {
+        title: 'Témoignages',
+        idKey: 'name',
+        sortable: true,
+        fields: [
+          { name: 'name', label: 'Nom et ville', required: true, placeholder: 'Clarisse, Kinshasa' },
+          { name: 'text', label: 'Témoignage', type: 'i18nText', required: true },
+        ],
+        makeNew: () => ({ name: '', text: { fr: '', en: '' } }),
+        summary: (x) => ({ title: x.name, subtitle: fr(x.text) }),
+      },
+    },
+    network: {
+      label: 'Réseau',
+      file: 'content',
+      key: 'network',
+      editor: {
+        title: 'Réseau de diffusion',
+        idKey: 'city',
+        sortable: true,
+        fields: [
+          { name: 'city', label: 'Ville', required: true },
+          { name: 'channel', label: 'Canaux / fréquences', type: 'i18n', required: true },
+        ],
+        makeNew: () => ({ city: '', channel: { fr: '', en: '' } }),
+        summary: (n) => ({ title: n.city, subtitle: fr(n.channel) }),
+      },
+    },
+    stats: { label: 'Statistiques', custom: 'stats' },
+    settings: { label: 'Direct & coordonnées', custom: 'settings' },
+    backups: { label: 'Sauvegardes', custom: 'backups' },
+  };
+}
+
+const NAV_GROUPS = [
+  ['Tableau de bord', ['dashboard', 'stats']],
+  ['Contenus TV', ['shows', 'episodes', 'categories', 'schedule']],
+  ['Site', ['events', 'news', 'team', 'testimonials', 'network']],
+  ['Configuration', ['settings', 'backups']],
+];
+
+/* ---------------------------------------------------------------- */
+
+const SETTINGS_FIELDS = [
+  ['Direct', [
+    { name: 'live.youtubeUrl', label: 'Lien du live YouTube', type: 'url', wide: true, placeholder: 'https://www.youtube.com/live/…  ou  https://youtu.be/…', hint: 'Collez le lien de la vidéo en direct (bouton « Partager » sur YouTube). Prioritaire sur les options ci-dessous.' },
+    { name: 'live.hlsUrl', label: 'URL du flux HLS (.m3u8)', type: 'url', hint: 'Option avancée : flux d’un service de streaming payant.' },
+    { name: 'live.youtubeChannelId', label: 'Identifiant de chaîne YouTube', hint: 'Option de secours : « UC… ». Affiche automatiquement le direct en cours de la chaîne.' },
+    { name: 'live.poster', label: 'Image d’attente du lecteur', type: 'image' },
+  ]],
+  ['Coordonnées', [
+    { name: 'contact.address', label: 'Adresse', wide: true },
+    { name: 'contact.email', label: 'E-mail', type: 'email' },
+    { name: 'contact.whatsapp', label: 'Numéro WhatsApp' },
+    { name: 'contact.phones', label: 'Téléphones', type: 'list' },
+    { name: 'contact.map.lat', label: 'Carte : latitude', type: 'number' },
+    { name: 'contact.map.lon', label: 'Carte : longitude', type: 'number' },
+  ]],
+  ['Réseaux sociaux', [
+    { name: 'social.youtube', label: 'YouTube', type: 'url' },
+    { name: 'social.facebook', label: 'Facebook', type: 'url' },
+    { name: 'social.instagram', label: 'Instagram', type: 'url' },
+    { name: 'social.x', label: 'X', type: 'url' },
+    { name: 'social.whatsapp', label: 'Lien WhatsApp', type: 'url', hint: 'Ex. : https://wa.me/243…' },
+  ]],
+];
+
+const LIVE_STEPS = [
+  ['La régie', 'produit le programme, celui qui part déjà vers l’émetteur TV.'],
+  ['Un encodeur', 'transforme ce signal en flux Internet. Ça peut être un logiciel gratuit comme OBS Studio sur un PC branché à la régie, ou un boîtier d’encodage dédié.'],
+  ['La plateforme', 'reçoit le flux et le redistribue à tous les spectateurs. C’est elle qui supporte la charge quand des milliers de personnes regardent en même temps.'],
+  ['Le site', 'affiche simplement le lecteur de cette plateforme.'],
+];
+
+function LiveHelp() {
+  return (
+    <div className="mb-5 rounded-lg bg-brand/5 p-4 ring-1 ring-brand/10">
+      <p className="mb-3 text-sm font-semibold text-brand">Comment le direct arrive sur le site</p>
+      <ol className="grid gap-3 sm:grid-cols-4">
+        {LIVE_STEPS.map(([title, text], i) => (
+          <li key={title} className="text-sm text-gray-700">
+            <span className="mb-1 flex items-center gap-2 font-semibold text-ink">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-xs text-white">{i + 1}</span>
+              {title}
+            </span>
+            {text}
+          </li>
+        ))}
+      </ol>
+      <p className="mt-3 text-xs text-gray-600">La fréquence TV (TNT, satellite) ne peut pas être lue par un navigateur : seul un flux Internet peut s’afficher sur le site.</p>
+    </div>
+  );
+}
+
+/** Indique ce qui a été reconnu dans le lien YouTube et propose un aperçu. */
+function LiveStatus({ live }) {
+  const [preview, setPreview] = useState(false);
+  const yt = parseYouTube(live.youtubeUrl);
+  const source = liveSource(live);
+  let message;
+  let tone = 'text-green-800 bg-green-50 ring-green-200';
+  if (live.youtubeUrl && !yt) {
+    message = 'Lien non reconnu. Utilisez le lien de la vidéo en direct (youtube.com/live/…, youtu.be/… ou watch?v=…).';
+    tone = 'text-red-800 bg-red-50 ring-red-200';
+  } else if (yt?.handle) {
+    message = `Le lien de chaîne « ${yt.handle} » ne peut pas être intégré. Ouvrez le direct sur YouTube, cliquez sur « Partager » et collez ce lien-là.`;
+    tone = 'text-red-800 bg-red-50 ring-red-200';
+  } else if (yt?.videoId) message = `✓ Vidéo YouTube détectée (${yt.videoId}). Pensez à mettre ce lien à jour si vous lancez un nouveau direct.`;
+  else if (yt?.channelId) message = '✓ Chaîne YouTube détectée : le direct en cours de la chaîne s’affichera automatiquement.';
+  else if (source) message = `✓ Source utilisée : ${source.type === 'hls' ? 'flux HLS' : 'identifiant de chaîne YouTube'}.`;
+  else {
+    message = 'Aucun direct configuré : la page « Regarder » affichera un message d’attente.';
+    tone = 'text-amber-900 bg-amber-50 ring-amber-200';
+  }
+  return (
+    <div className="mt-4 space-y-3 sm:col-span-2">
+      <p role="status" className={`rounded-lg p-3 text-sm ring-1 ${tone}`}>{message}</p>
+      {source?.type === 'youtube' && (
+        <>
+          <button type="button" onClick={() => setPreview((v) => !v)} className="text-sm font-semibold text-brand hover:underline">
+            {preview ? 'Masquer l’aperçu' : '▶ Aperçu du lecteur'}
+          </button>
+          {preview && (
+            <div className="aspect-video max-w-xl overflow-hidden rounded-lg bg-ink">
+              <iframe title="Aperçu du direct" src={source.src.replace('autoplay=1', 'autoplay=0')} allow="encrypted-media; picture-in-picture; fullscreen" allowFullScreen className="h-full w-full" />
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function SettingsEditor({ content, onSave }) {
+  const [draft, setDraft] = useState(content);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(content);
+  return (
+    <div>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <h1 className="text-2xl font-bold">Direct & coordonnées</h1>
+        <button type="button" disabled={!dirty} onClick={() => onSave(draft)} className="btn-primary disabled:opacity-50">Enregistrer</button>
+      </div>
+      <div className="space-y-6">
+        {SETTINGS_FIELDS.map(([title, fields]) => (
+          <section key={title} className="rounded-xl bg-white p-6 ring-1 ring-black/5">
+            <h2 className="mb-4 font-semibold">{title}</h2>
+            {title === 'Direct' && <LiveHelp />}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {fields.map((def) => (
+                <Field key={def.name} def={def} value={getPath(draft, def.name)} onChange={(v) => setDraft((d) => setPath(d, def.name, v))} />
+              ))}
+              {title === 'Direct' && <LiveStatus live={draft.live} />}
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Backups({ onRestored, notify }) {
+  const [list, setList] = useState(null);
+  const [confirm, setConfirm] = useState(null);
+  const refresh = useCallback(() => api.backups().then(setList).catch((e) => notify(e.message, 'error')), [notify]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const restore = async (name) => {
+    setConfirm(null);
+    try {
+      await api.restore(name);
+      notify('Sauvegarde restaurée.');
+      await onRestored();
+      refresh();
+    } catch (e) {
+      notify(e.message, 'error');
+    }
+  };
+
+  const describe = (name) => {
+    const [, file, stamp] = /^(\w+)-(.+)\.json$/.exec(name);
+    const iso = stamp.replace(/^(\d{4}-\d{2}-\d{2}T\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/, '$1:$2:$3.$4Z');
+    return { file: { shows: 'Émissions, épisodes, catégories', schedule: 'Programme', content: 'Contenus du site' }[file], date: new Date(iso).toLocaleString('fr-FR') };
+  };
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold">Sauvegardes</h1>
+      <p className="mb-6 mt-1 text-sm text-gray-600">Une copie est faite automatiquement avant chaque enregistrement (30 dernières par fichier). Restaurer remplace la version actuelle — qui est elle-même sauvegardée.</p>
+      <ul className="divide-y divide-gray-100 rounded-xl bg-white ring-1 ring-black/5">
+        {list?.length === 0 && <li className="p-6 text-center text-sm text-gray-500">Aucune sauvegarde pour l’instant.</li>}
+        {list === null && <li className="p-6 text-center text-sm text-gray-500">Chargement…</li>}
+        {list?.map((name) => {
+          const d = describe(name);
+          return (
+            <li key={name} className="flex items-center gap-4 p-3">
+              <div className="flex-1">
+                <p className="font-medium">{d.file}</p>
+                <p className="text-xs text-gray-500">{d.date}</p>
+              </div>
+              {confirm === name ? (
+                <span className="flex gap-1">
+                  <button type="button" onClick={() => restore(name)} className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white">Confirmer</button>
+                  <button type="button" onClick={() => setConfirm(null)} className="rounded-lg px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-200">Annuler</button>
+                </span>
+              ) : (
+                <button type="button" onClick={() => setConfirm(name)} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-brand hover:bg-brand/10">Restaurer</button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function Dashboard({ data, go }) {
+  const { shows, content } = data;
+  const stats = [
+    ['Émissions', shows.shows.length, 'shows'],
+    ['Épisodes', shows.episodes.length, 'episodes'],
+    ['Événements à venir', content.events.filter((e) => e.date >= today()).length, 'events'],
+    ['Actualités', content.news.length, 'news'],
+  ];
+  const latest = [...shows.episodes].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  const liveOk = Boolean(liveSource(content.live));
+  return (
+    <div>
+      <h1 className="text-2xl font-bold">Tableau de bord</h1>
+      <p className="mt-1 text-sm text-gray-600">Bienvenue dans l’administration de Hope Chanel RDC.</p>
+      {!liveOk && (
+        <button type="button" onClick={() => go('settings')} className="mt-6 block w-full rounded-xl bg-amber-50 p-4 text-left text-sm text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100">
+          ⚠ Le flux du direct n’est pas configuré : la page « Regarder » ne peut pas diffuser. <strong>Configurer →</strong>
+        </button>
+      )}
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map(([label, n, key]) => (
+          <button key={key} type="button" onClick={() => go(key)} className="rounded-xl bg-white p-5 text-left ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md">
+            <span className="block font-heading text-3xl font-bold text-brand">{n}</span>
+            <span className="text-sm text-gray-600">{label}</span>
+          </button>
+        ))}
+      </div>
+      <section className="mt-8 rounded-xl bg-white p-5 ring-1 ring-black/5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-semibold">Derniers épisodes</h2>
+          <button type="button" onClick={() => go('episodes')} className="text-sm font-semibold text-brand hover:underline">Gérer →</button>
+        </div>
+        <ul className="divide-y divide-gray-100 text-sm">
+          {latest.map((e) => (
+            <li key={e.id} className="flex justify-between gap-4 py-2">
+              <span className="truncate">{fr(e.title)}</span>
+              <span className="shrink-0 text-gray-500">{formatDate(e.date, 'fr')}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- */
+
+function Login({ onLogged }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      await api.login(email, password);
+      onLogged();
+    } catch (ex) {
+      setError(ex.status === undefined || ex.status >= 500 ? 'Serveur injoignable. Lancez « npm run dev ».' : ex.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-mist p-4">
+      <form onSubmit={submit} className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-xl ring-1 ring-black/5">
+        <Logo />
+        <h1 className="mt-6 text-xl font-bold">Administration</h1>
+        <label htmlFor="email" className="mb-1 mt-6 block text-sm font-medium">E-mail</label>
+        <input id="email" type="email" autoComplete="username" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} className="input" />
+        <label htmlFor="pwd" className="mb-1 mt-4 block text-sm font-medium">Mot de passe</label>
+        <input id="pwd" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="input" aria-invalid={!!error} aria-describedby={error ? 'pwd-err' : undefined} />
+        {error && <p id="pwd-err" role="alert" className="error-text">{error}</p>}
+        <button type="submit" disabled={busy || !email || !password} className="btn-primary mt-6 w-full py-3 disabled:opacity-60">{busy ? 'Connexion…' : 'Se connecter'}</button>
+        <Link to="/" className="mt-4 block text-center text-sm text-gray-600 hover:text-brand">← Retour au site</Link>
+      </form>
+    </main>
+  );
+}
+
+export default function Admin() {
+  const { pathname } = useLocation();
+  const [auth, setAuth] = useState(null); // null = vérification en cours
+  const [data, setData] = useState(null);
+  const [section, setSection] = useState(() => pathname.split('/')[2] || 'dashboard');
+  const [toast, setToast] = useState(null);
+  const [navOpen, setNavOpen] = useState(false);
+
+  useEffect(() => {
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex, nofollow';
+    document.head.appendChild(meta);
+    document.title = 'Administration | Hope Chanel RDC';
+    api.me().then((r) => setAuth(r.authenticated)).catch(() => setAuth(false));
+    return () => meta.remove();
+  }, []);
+
+  // Menu mobile : Échap pour fermer, page figée derrière
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e) => e.key === 'Escape' && setNavOpen(false);
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [navOpen]);
+
+  const notify = useCallback((message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
+
+  const load = useCallback(() => api.load().then(setData).catch((e) => notify(e.message, 'error')), [notify]);
+  useEffect(() => {
+    if (auth) load();
+  }, [auth, load]);
+
+  const go = (key) => {
+    setSection(key);
+    setNavOpen(false);
+    window.history.replaceState(null, '', key === 'dashboard' ? '/admin' : `/admin/${key}`);
+    window.scrollTo(0, 0);
+  };
+
+  /** Enregistre un fichier complet. Renvoie true si réussi. */
+  const saveFile = async (file, next) => {
+    try {
+      await api.save(file, next);
+      setData((d) => ({ ...d, [file]: next }));
+      notify('Modifications enregistrées.');
+      return true;
+    } catch (e) {
+      if (e.status === 401) setAuth(false);
+      notify(e.message, 'error');
+      return false;
+    }
+  };
+
+  if (auth === null) return <div className="flex min-h-screen items-center justify-center text-gray-500">Chargement…</div>;
+  if (!auth) return <Login onLogged={() => setAuth(true)} />;
+  if (!data) return <div className="flex min-h-screen items-center justify-center text-gray-500">Chargement des données…</div>;
+
+  const sections = buildSections(data);
+  const current = sections[section];
+
+  let body;
+  if (section === 'dashboard' || !current) body = <Dashboard data={data} go={go} />;
+  else if (current.custom === 'schedule') body = <ScheduleEditor key={JSON.stringify(data.schedule).length} schedule={data.schedule} shows={data.shows.shows} onSave={(s) => saveFile('schedule', s)} />;
+  else if (current.custom === 'settings') body = <SettingsEditor content={data.content} onSave={(c) => saveFile('content', c)} />;
+  else if (current.custom === 'stats') body = <Stats data={data} />;
+  else if (current.custom === 'backups') body = <Backups onRestored={load} notify={notify} />;
+  else {
+    const fileData = data[current.file];
+    body = (
+      <CollectionEditor
+        key={section}
+        {...current.editor}
+        items={fileData[current.key]}
+        onSave={(items) => saveFile(current.file, { ...fileData, [current.key]: items })}
+      />
+    );
+  }
+
+  const label = (k) => (k === 'dashboard' ? 'Accueil' : sections[k].label);
+
+  return (
+    <div className="min-h-screen bg-mist lg:flex">
+      <aside className="sticky top-0 z-40 bg-brand-dark text-white lg:h-screen lg:w-64 lg:shrink-0 lg:overflow-y-auto">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 lg:p-6">
+          <Logo size="sm" onDark />
+          {/* Mobile : section en cours + bouton du menu */}
+          <button
+            type="button"
+            className="flex h-11 min-w-0 items-center gap-2 rounded-full bg-white/10 pl-4 pr-3 text-sm font-semibold ring-1 ring-white/20 lg:hidden"
+            aria-expanded={navOpen}
+            aria-controls="admin-nav"
+            aria-label={navOpen ? 'Fermer le menu' : `Menu — section : ${label(section in sections ? section : 'dashboard')}`}
+            onClick={() => setNavOpen((v) => !v)}
+          >
+            <span className="truncate">{label(section in sections ? section : 'dashboard')}</span>
+            {navOpen ? <Close className="h-5 w-5 shrink-0" /> : <MenuIcon className="h-5 w-5 shrink-0" />}
+          </button>
+        </div>
+        {navOpen && <div className="fixed inset-0 top-[68px] -z-10 bg-ink/50 lg:hidden" onClick={() => setNavOpen(false)} aria-hidden="true" />}
+        <nav
+          id="admin-nav"
+          aria-label="Administration"
+          className={`${navOpen ? 'block' : 'hidden'} absolute inset-x-0 top-full max-h-[calc(100dvh-68px)] overflow-y-auto overscroll-contain bg-brand-dark px-3 pb-6 shadow-2xl lg:static lg:block lg:max-h-none lg:shadow-none`}
+        >
+          {NAV_GROUPS.map(([group, keys]) => (
+            <div key={group} className="mb-4">
+              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/50">{group}</p>
+              {keys.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => go(k)}
+                  aria-current={section === k ? 'page' : undefined}
+                  className={`block w-full rounded-lg px-3 py-3 text-left text-[15px] transition lg:py-2 lg:text-sm ${section === k ? 'bg-white/15 font-semibold text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}
+                >
+                  {label(k)}
+                </button>
+              ))}
+            </div>
+          ))}
+          <div className="mt-6 space-y-1 border-t border-white/10 pt-4">
+            <a href="/" target="_blank" rel="noopener" className="block rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-white/10">↗ Voir le site</a>
+            <button
+              type="button"
+              onClick={() => api.logout().finally(() => setAuth(false))}
+              className="block w-full rounded-lg px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10"
+            >
+              Se déconnecter
+            </button>
+          </div>
+        </nav>
+      </aside>
+
+      <main className="mx-auto w-full max-w-6xl flex-1 p-4 sm:p-8">{body}</main>
+
+      {toast && (
+        <div
+          role={toast.type === 'error' ? 'alert' : 'status'}
+          className={`fixed bottom-6 right-6 z-[60] max-w-sm animate-fade-in rounded-xl px-5 py-3 text-sm font-medium text-white shadow-xl ${toast.type === 'error' ? 'bg-red-600' : 'bg-green-700'}`}
+        >
+          {toast.message}
+        </div>
+      )}
+    </div>
+  );
+}
