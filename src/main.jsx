@@ -9,7 +9,8 @@ import './index.css';
 hydrateData().finally(() => {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
-      <BrowserRouter>
+      {/* Comportements de React Router v7 activés dès maintenant (supprime les avertissements de la console) */}
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <LanguageProvider>
           <App />
         </LanguageProvider>

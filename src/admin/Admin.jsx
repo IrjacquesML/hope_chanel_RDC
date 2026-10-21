@@ -549,7 +549,7 @@ export default function Admin() {
   const label = (k) => (k === 'dashboard' ? 'Accueil' : sections[k].label);
 
   return (
-    <div className="min-h-screen bg-mist lg:flex">
+    <div data-admin className="min-h-screen bg-mist lg:flex">
       <aside className="sticky top-0 z-40 bg-brand-dark text-white lg:h-screen lg:w-64 lg:shrink-0 lg:overflow-y-auto">
         <div className="flex items-center justify-between gap-3 px-4 py-3 lg:p-6">
           <Logo size="sm" onDark />
@@ -601,7 +601,7 @@ export default function Admin() {
         </nav>
       </aside>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 p-4 sm:p-8">{body}</main>
+      <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 p-4 sm:p-8">{body}</main>
 
       {toast && (
         <div

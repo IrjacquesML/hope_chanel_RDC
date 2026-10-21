@@ -46,6 +46,7 @@ export default function About() {
 
       <section id="equipe" aria-labelledby="team" className="container-page scroll-mt-24 py-14">
         <SectionTitle id="team" title={t('about.teamTitle')} />
+        {content.team.length === 0 && <p className="text-gray-600">{t('common.empty')}</p>}
         <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {content.team.map((m) => (
             <li key={m.name} className="card group text-center">

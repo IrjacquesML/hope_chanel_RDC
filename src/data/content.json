@@ -20,8 +20,8 @@
     "whatsapp": "https://wa.me/243000000002"
   },
   "live": {
-    "youtubeUrl": "",
-    "youtubeChannelId": "",
+    "youtubeUrl": "https://youtu.be/KgqORHpYUGk?si=3-qx--H7GG7-ECxp",
+    "youtubeChannelId": "@HopechannelRDC",
     "hlsUrl": "",
     "poster": "photo-1478737270239-2f02b77fc618"
   },
@@ -87,47 +87,7 @@
       }
     }
   ],
-  "news": [
-    {
-      "id": "nouvel-emetteur-kisangani",
-      "date": "2026-10-10",
-      "image": "photo-1593784991095-a205069470b6",
-      "title": {
-        "fr": "Hope Chanel RDC arrive à Kisangani",
-        "en": "Hope Chanel RDC arrives in Kisangani"
-      },
-      "summary": {
-        "fr": "Grâce à un nouvel émetteur, les habitants de Kisangani peuvent désormais capter la chaîne sur la TNT.",
-        "en": "Thanks to a new transmitter, Kisangani residents can now receive the channel on digital terrestrial TV."
-      }
-    },
-    {
-      "id": "application-mobile",
-      "date": "2026-09-22",
-      "image": "photo-1512941937669-90a1b58e7e9c",
-      "title": {
-        "fr": "Notre application mobile est disponible",
-        "en": "Our mobile app is now available"
-      },
-      "summary": {
-        "fr": "Regardez le direct et les replays sur Android et iOS, avec un mode économie de données.",
-        "en": "Watch live and on-demand on Android and iOS, with a data-saver mode."
-      }
-    },
-    {
-      "id": "saison-2-jeunesse",
-      "date": "2026-09-05",
-      "image": "photo-1522202176988-66273c2fd55f",
-      "title": {
-        "fr": "« Jeunesse en Marche » : saison 2",
-        "en": "« Jeunesse en Marche »: season 2"
-      },
-      "summary": {
-        "fr": "Nouveaux invités, nouveau plateau et une émission ouverte aux questions du public via WhatsApp.",
-        "en": "New guests, a new set and a show open to viewer questions via WhatsApp."
-      }
-    }
-  ],
+  "news": [],
   "team": [
     {
       "name": "Emmanuel Mbuyi",
@@ -162,29 +122,7 @@
       "image": "photo-1438761681033-6461ffad8d80"
     }
   ],
-  "testimonials": [
-    {
-      "name": "Clarisse, Kinshasa",
-      "text": {
-        "fr": "« Réveil d'Espoir » m'accompagne chaque matin depuis deux ans. Dans les moments difficiles, ces paroles m'ont relevée.",
-        "en": "« Réveil d'Espoir » has been with me every morning for two years. In hard times, these words lifted me up."
-      }
-    },
-    {
-      "name": "Jean-Pierre, Mbuji-Mayi",
-      "text": {
-        "fr": "Je donne chaque mois parce que cette chaîne apporte la paix dans des milliers de foyers. C'est mon investissement le plus utile.",
-        "en": "I give every month because this channel brings peace to thousands of homes. It's my most worthwhile investment."
-      }
-    },
-    {
-      "name": "Famille Nsimba, Matadi",
-      "text": {
-        "fr": "Nous regardons « Familles en Lumière » ensemble. Notre façon de nous parler a vraiment changé.",
-        "en": "We watch « Familles en Lumière » together. The way we talk to each other has truly changed."
-      }
-    }
-  ],
+  "testimonials": [],
   "network": [
     {
       "city": "Kinshasa",

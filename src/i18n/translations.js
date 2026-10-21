@@ -22,6 +22,7 @@ const fr = {
     notFound: 'Page introuvable',
     notFoundText: "La page que vous cherchez n'existe pas ou a été déplacée.",
     home: "Retour à l'accueil",
+    empty: 'Aucun contenu pour le moment. Revenez bientôt !',
   },
   nav: {
     watch: 'Regarder',
@@ -232,6 +233,7 @@ const en = {
     notFound: 'Page not found',
     notFoundText: "The page you are looking for doesn't exist or has moved.",
     home: 'Back to home',
+    empty: 'Nothing here yet. Check back soon!',
   },
   nav: {
     watch: 'Watch',

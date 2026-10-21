@@ -4,7 +4,9 @@ import { slugify } from './fields';
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const TEMPLATE_LABELS = { weekday: 'Lun.–ven.', saturday: 'Samedi', sunday: 'Dimanche' };
 const label = (k) => TEMPLATE_LABELS[k] || k;
-const cell = 'rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-brand focus:outline-none';
+const cell = 'h-10 rounded-md border border-gray-300 bg-white px-2 text-sm focus:border-brand focus:outline-none';
+// Colonnes de la vue « ligne » (grand écran)
+const ROW = 'xl:grid-cols-[7.5rem_7.5rem_minmax(10rem,1fr)_minmax(14rem,1.4fr)_4.5rem_3.5rem]';
 
 /** Vérifie horaires et chevauchements d'un modèle de journée. */
 function checkSlots(slots) {
@@ -80,9 +82,9 @@ export default function ScheduleEditor({ schedule, shows, onSave }) {
 
       <section className="mb-8 rounded-xl bg-white p-5 ring-1 ring-black/5">
         <h2 className="mb-3 font-semibold">Semaine type</h2>
-        <div className="grid gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 2xl:grid-cols-7">
           {DAYS.map((d, i) => (
-            <label key={d} className="text-sm">
+            <label key={d} className="min-w-0 text-sm">
               <span className="mb-1 block font-medium">{d}</span>
               <select value={draft.week[i]} onChange={(e) => setDraft((s) => ({ ...s, week: s.week.map((w, j) => (j === i ? e.target.value : w)) }))} className={`${cell} w-full`}>
                 {Object.keys(draft.templates).map((k) => <option key={k} value={k}>{label(k)}</option>)}
@@ -99,69 +101,71 @@ export default function ScheduleEditor({ schedule, shows, onSave }) {
             type="button"
             onClick={() => setTab(k)}
             aria-pressed={tab === k}
-            className={`rounded-full px-4 py-2 text-sm font-semibold ${tab === k ? 'bg-brand text-white' : 'bg-white text-gray-700 ring-1 ring-black/10 hover:bg-mist'}`}
+            className={`min-h-[44px] rounded-full px-4 text-sm font-semibold ${tab === k ? 'bg-brand text-white' : 'bg-white text-gray-700 ring-1 ring-black/10 hover:bg-mist'}`}
           >
             {label(k)} <span className="opacity-70">({draft.templates[k].length})</span>
           </button>
         ))}
-        <span className="ml-2 flex gap-1">
-          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nouveau modèle (ex. fete)" aria-label="Nom du nouveau modèle" className={cell} />
-          <button type="button" onClick={addTemplate} className="rounded-md bg-mist px-3 text-sm font-semibold text-brand hover:bg-gray-200">+ Créer</button>
+        <span className="flex w-full gap-1 sm:ml-2 sm:w-auto">
+          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nouveau modèle (ex. fete)" aria-label="Nom du nouveau modèle" className={`${cell} min-w-0 flex-1`} />
+          <button type="button" onClick={addTemplate} className="h-10 shrink-0 rounded-md bg-mist px-3 text-sm font-semibold text-brand hover:bg-gray-200">+ Créer</button>
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded-xl bg-white ring-1 ring-black/5">
-        <table className="w-full min-w-[760px] text-sm">
-          <thead className="bg-mist text-left text-xs uppercase tracking-wide text-gray-600">
-            <tr>
-              <th className="px-3 py-2">Début</th>
-              <th className="px-3 py-2">Fin</th>
-              <th className="px-3 py-2">Émission</th>
-              <th className="px-3 py-2">Titre libre (si pas d’émission)</th>
-              <th className="px-3 py-2">Direct</th>
-              <th className="px-3 py-2"><span className="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {slots.map((s, i) => (
-              <tr key={i}>
-                <td className="px-3 py-2"><input type="time" value={s.start} onChange={(e) => updateSlot(i, { start: e.target.value })} className={cell} aria-label="Début" /></td>
-                <td className="px-3 py-2"><input type="time" value={s.end} onChange={(e) => updateSlot(i, { end: e.target.value })} className={cell} aria-label="Fin" /></td>
-                <td className="px-3 py-2">
-                  <select
-                    value={s.show || ''}
-                    onChange={(e) => updateSlot(i, e.target.value ? { show: e.target.value, title: undefined } : { show: undefined, title: s.title || { fr: '', en: '' } })}
-                    className={cell}
-                    aria-label="Émission"
-                  >
-                    <option value="">— Titre libre —</option>
-                    {shows.map((sh) => <option key={sh.slug} value={sh.slug}>{sh.title}</option>)}
-                  </select>
-                </td>
-                <td className="px-3 py-2">
-                  {!s.show && (
-                    <div className="flex gap-1">
-                      <input value={s.title?.fr || ''} onChange={(e) => updateSlot(i, { title: { ...s.title, fr: e.target.value } })} placeholder="Titre FR" aria-label="Titre FR" className={`${cell} w-36`} />
-                      <input value={s.title?.en || ''} onChange={(e) => updateSlot(i, { title: { ...s.title, en: e.target.value } })} placeholder="Titre EN" aria-label="Titre EN" className={`${cell} w-36`} />
-                    </div>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-center">
-                  <input type="checkbox" checked={!!s.live} onChange={(e) => updateSlot(i, { live: e.target.checked || undefined })} className="h-4 w-4 accent-red-600" aria-label="En direct" />
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <button type="button" onClick={() => setSlots(slots.filter((_, j) => j !== i))} className="rounded px-2 py-1 text-red-700 hover:bg-red-50" aria-label="Supprimer le créneau">✕</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Grand écran : une ligne par créneau. Mobile / tablette : une carte par créneau. */}
+      <div className="overflow-hidden rounded-xl bg-white ring-1 ring-black/5">
+        <div className={`hidden gap-3 bg-mist px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-600 xl:grid ${ROW}`} aria-hidden="true">
+          <span>Début</span><span>Fin</span><span>Émission</span><span>Titre libre (si pas d’émission)</span><span className="text-center">Direct</span><span />
+        </div>
+        <ul className="divide-y divide-gray-100">
+          {slots.map((s, i) => (
+            <li key={i} className={`grid grid-cols-2 gap-3 p-4 xl:items-center xl:gap-3 xl:px-3 xl:py-2 ${ROW}`}>
+              <label className="text-xs font-medium text-gray-600 xl:contents">
+                <span className="mb-1 block xl:hidden">Début</span>
+                <input type="time" value={s.start} onChange={(e) => updateSlot(i, { start: e.target.value })} className={`${cell} w-full`} aria-label="Début" />
+              </label>
+              <label className="text-xs font-medium text-gray-600 xl:contents">
+                <span className="mb-1 block xl:hidden">Fin</span>
+                <input type="time" value={s.end} onChange={(e) => updateSlot(i, { end: e.target.value })} className={`${cell} w-full`} aria-label="Fin" />
+              </label>
+              <label className="col-span-2 text-xs font-medium text-gray-600 xl:col-span-1 xl:contents">
+                <span className="mb-1 block xl:hidden">Émission</span>
+                <select
+                  value={s.show || ''}
+                  onChange={(e) => updateSlot(i, e.target.value ? { show: e.target.value, title: undefined } : { show: undefined, title: s.title || { fr: '', en: '' } })}
+                  className={`${cell} w-full min-w-0`}
+                  aria-label="Émission"
+                >
+                  <option value="">— Titre libre —</option>
+                  {shows.map((sh) => <option key={sh.slug} value={sh.slug}>{sh.title}</option>)}
+                </select>
+              </label>
+              <div className={`col-span-2 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 xl:col-span-1 ${s.show ? 'hidden xl:block' : ''}`}>
+                {!s.show && (
+                  <>
+                    <input value={s.title?.fr || ''} onChange={(e) => updateSlot(i, { title: { ...s.title, fr: e.target.value } })} placeholder="Titre FR" aria-label="Titre FR" className={`${cell} w-full min-w-0`} />
+                    <input value={s.title?.en || ''} onChange={(e) => updateSlot(i, { title: { ...s.title, en: e.target.value } })} placeholder="Titre EN" aria-label="Titre EN" className={`${cell} w-full min-w-0`} />
+                  </>
+                )}
+              </div>
+              <label className="flex min-h-[44px] items-center gap-2 text-sm xl:justify-center">
+                <input type="checkbox" checked={!!s.live} onChange={(e) => updateSlot(i, { live: e.target.checked || undefined })} className="h-5 w-5 accent-red-600" aria-label="En direct" />
+                <span className="xl:sr-only">En direct</span>
+              </label>
+              <div className="flex justify-end">
+                <button type="button" onClick={() => setSlots(slots.filter((_, j) => j !== i))} className="flex h-11 min-w-[44px] items-center justify-center gap-1 rounded-lg px-3 text-sm text-red-700 hover:bg-red-50" aria-label="Supprimer le créneau">
+                  ✕<span className="xl:hidden">Supprimer</span>
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <button type="button" onClick={addSlot} className="text-sm font-semibold text-brand hover:underline">+ Ajouter un créneau</button>
+        <button type="button" onClick={addSlot} className="min-h-[44px] rounded-full bg-brand/10 px-4 text-sm font-semibold text-brand hover:bg-brand/15">+ Ajouter un créneau</button>
         {!draft.week.includes(tab) && (
-          <button type="button" onClick={() => removeTemplate(tab)} className="text-sm font-semibold text-red-700 hover:underline">Supprimer ce modèle</button>
+          <button type="button" onClick={() => removeTemplate(tab)} className="min-h-[44px] px-2 text-sm font-semibold text-red-700 hover:underline">Supprimer ce modèle</button>
         )}
       </div>
       <p className="mt-1 text-xs text-gray-500">Les créneaux sont triés par heure à l’enregistrement. Pour terminer à minuit, indiquez 23:59.</p>

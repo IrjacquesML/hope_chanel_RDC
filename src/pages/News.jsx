@@ -1,5 +1,6 @@
 import PageHeader from '../components/PageHeader';
 import Img from '../components/Img';
+import EmptyState from '../components/EmptyState';
 import { formatDate } from '../lib';
 import { useLang } from '../i18n/LanguageContext';
 import { useSeo } from '../hooks/useSeo';
@@ -11,7 +12,8 @@ export default function News() {
   return (
     <>
       <PageHeader title={t('news.title')} intro={t('news.intro')} />
-      <section className="container-page grid gap-6 py-12 md:grid-cols-3">
+      {content.news.length === 0 && <div className="container-page py-12"><EmptyState /></div>}
+      <section className={`container-page grid gap-6 py-12 md:grid-cols-3 ${content.news.length ? '' : 'hidden'}`}>
         {content.news.map((n) => (
           <article key={n.id} className="card group">
             <div className="aspect-video overflow-hidden">

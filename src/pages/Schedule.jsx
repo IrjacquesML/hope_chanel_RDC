@@ -79,21 +79,29 @@ export default function Schedule() {
           </div>
         ) : (
           <div className="mt-8">
-            <div className="-mx-4 overflow-x-auto px-4 pb-2">
-              <div className="flex gap-2" role="group" aria-label={t('nav.week')}>
-                {days.map((d, i) => (
-                  <button
-                    key={d}
-                    type="button"
-                    aria-pressed={selectedDay === i}
-                    onClick={() => setParams({ vue: 'semaine', jour: String(i) })}
-                    className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${selectedDay === i ? 'bg-accent text-ink' : 'bg-mist text-gray-700 hover:bg-gray-200'}`}
-                  >
-                    {d}
-                    {i === now.dayIndex && <span className="ml-1 text-xs font-normal">({t('schedule.today').toLowerCase()})</span>}
-                  </button>
-                ))}
-              </div>
+            {/* Les 7 jours tiennent toujours dans l'écran : pas de bande à faire glisser */}
+            <div className="grid grid-cols-7 gap-1 sm:flex sm:flex-wrap sm:gap-2" role="group" aria-label={t('nav.week')}>
+              {days.map((d, i) => (
+                <button
+                  key={d}
+                  type="button"
+                  aria-pressed={selectedDay === i}
+                  aria-label={i === now.dayIndex ? `${d} (${t('schedule.today').toLowerCase()})` : d}
+                  onClick={() => setParams({ vue: 'semaine', jour: String(i) })}
+                  className={`relative flex min-h-[48px] min-w-0 flex-col items-center justify-center rounded-xl px-1 text-sm font-semibold transition sm:flex-row sm:px-4 ${
+                    selectedDay === i ? 'bg-accent text-ink' : 'bg-mist text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <span className="sm:hidden" aria-hidden="true">{d.slice(0, 3)}</span>
+                  <span className="hidden sm:inline" aria-hidden="true">{d}</span>
+                  {i === now.dayIndex && (
+                    <>
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-brand sm:hidden" aria-hidden="true" />
+                      <span className="ml-1 hidden text-xs font-normal sm:inline" aria-hidden="true">({t('schedule.today').toLowerCase()})</span>
+                    </>
+                  )}
+                </button>
+              ))}
             </div>
             <div className="mt-6 max-w-3xl">
               <h2 className="text-2xl font-bold">{days[selectedDay]}</h2>

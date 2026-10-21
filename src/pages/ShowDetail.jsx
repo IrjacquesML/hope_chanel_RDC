@@ -26,7 +26,7 @@ export default function ShowDetail() {
         <Img id={show.image} alt="" width={1600} sizes="100vw" priority className="absolute inset-0 -z-10 h-full w-full opacity-50" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-ink via-ink/70 to-transparent" aria-hidden="true" />
         <div className="container-page py-16 sm:py-24">
-          <Link to="/emissions" className="inline-flex items-center gap-1 text-sm text-white/85 hover:text-white">
+          <Link to="/emissions" className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-full px-2 text-sm text-white/85 hover:text-white">
             <ChevronLeft className="h-4 w-4" /> {t('nav.shows')}
           </Link>
           <p className="mt-6 inline-block rounded-full bg-accent px-3 py-1 text-xs font-semibold text-ink">{t(`categories.${show.category}`)}</p>

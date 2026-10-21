@@ -87,18 +87,21 @@ export default function HeroCarousel({ slides }) {
       </Link>
 
       {/* Contrôles */}
-      <div className="absolute inset-x-0 bottom-6 z-10">
-        <div className="container-page flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+      <div className="absolute inset-x-0 bottom-3 z-10 sm:bottom-6">
+        <div className="container-page flex items-center justify-between gap-2">
+          <div className="-ml-2 flex items-center">
             {slides.map((s, i) => (
+              // Zone tactile de 44 px autour d'un point visuel discret
               <button
                 key={s.slug}
                 type="button"
                 onClick={() => go(i)}
                 aria-label={`${t('home.heroGoTo')} ${s.title}`}
                 aria-current={i === index}
-                className={`h-2.5 rounded-full transition-all ${i === index ? 'w-10 bg-accent' : 'w-2.5 bg-white/60 hover:bg-white'}`}
-              />
+                className="group flex h-11 min-w-[28px] items-center justify-center px-1.5"
+              >
+                <span className={`block h-2.5 rounded-full transition-all ${i === index ? 'w-10 bg-accent' : 'w-2.5 bg-white/60 group-hover:bg-white'}`} />
+              </button>
             ))}
           </div>
           <div className="flex items-center gap-2">
@@ -112,7 +115,7 @@ export default function HeroCarousel({ slides }) {
                 type="button"
                 onClick={fn}
                 aria-label={label}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition hover:bg-white hover:text-brand"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition hover:bg-white hover:text-brand"
               >
                 {icon}
               </button>

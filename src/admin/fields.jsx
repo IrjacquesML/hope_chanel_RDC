@@ -124,7 +124,7 @@ export function Field({ def, value, onChange, error, locked }) {
         <div className="grid gap-2">
           {['fr', 'en'].map((l) => (
             <div key={l} className="flex items-start gap-2">
-              <span className="mt-2 w-7 shrink-0 rounded bg-mist py-0.5 text-center text-[10px] font-bold uppercase text-gray-600">{l}</span>
+              <span className="mt-2 w-7 shrink-0 rounded bg-mist py-0.5 text-center text-[11px] font-bold uppercase text-gray-600">{l}</span>
               <Tag
                 id={l === 'fr' ? id : undefined}
                 rows={def.type === 'i18nText' ? 3 : undefined}

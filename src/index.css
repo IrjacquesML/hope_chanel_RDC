@@ -4,6 +4,20 @@
 
 @layer base {
   html { scroll-behavior: smooth; }
+
+  /*
+   * Aucun balayage horizontal sur mobile : tout ce qui dépasserait à droite est rogné.
+   * « clip » (et non « hidden ») ne crée pas de zone de défilement : l'en-tête « sticky » continue de fonctionner.
+   */
+  html, body { max-width: 100%; }
+  body { overflow-x: hidden; } /* navigateurs anciens (hidden sur body seul : la fenêtre reste la zone de défilement) */
+  @supports (overflow-x: clip) {
+    html, body { overflow-x: clip; }
+  }
+  /* Mots très longs (adresses e-mail, liens) : retour à la ligne plutôt que débordement */
+  body { overflow-wrap: break-word; }
+  /* Médias jamais plus larges que leur conteneur */
+  img, video, iframe, svg { max-width: 100%; }
   h1, h2, h3, h4 { @apply font-heading text-ink; }
   :focus-visible { @apply outline outline-[3px] outline-offset-2 outline-accent; }
 }
@@ -26,4 +40,14 @@
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+/* Admin : cibles tactiles confortables sur mobile / écrans tactiles */
+@media (max-width: 1023px), (pointer: coarse) {
+  [data-admin] button,
+  [data-admin] select,
+  [data-admin] input:not([type='checkbox']):not([type='radio']):not([type='file']) {
+    min-height: 40px;
+  }
+  [data-admin] main button { min-width: 40px; }
 }

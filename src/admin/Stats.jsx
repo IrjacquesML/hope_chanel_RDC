@@ -266,15 +266,26 @@ export default function Stats({ data }) {
         />
         <details className="mt-3 text-sm">
           <summary className="cursor-pointer font-semibold text-brand">Voir le tableau des données</summary>
-          <div className="mt-2 max-h-72 overflow-auto">
-            <table className="w-full text-left">
-              <thead className="sticky top-0 bg-white text-xs uppercase text-gray-500">
-                <tr><th className="py-1">Jour</th><th>Visiteurs</th><th>Pages vues</th><th>Lancements</th><th>Temps regardé</th></tr>
+          {/* Défilement vertical uniquement ; libellés abrégés sur téléphone pour tenir en largeur */}
+          <div className="mt-2 max-h-72 overflow-y-auto overflow-x-hidden">
+            <table className="w-full table-fixed text-left text-xs sm:text-sm">
+              <thead className="sticky top-0 bg-white text-[11px] uppercase text-gray-500 sm:text-xs">
+                <tr>
+                  <th className="w-[30%] py-1">Jour</th>
+                  <th><span className="sm:hidden">Visit.</span><span className="hidden sm:inline">Visiteurs</span></th>
+                  <th><span className="sm:hidden">Pages</span><span className="hidden sm:inline">Pages vues</span></th>
+                  <th><span className="sm:hidden">Lanc.</span><span className="hidden sm:inline">Lancements</span></th>
+                  <th><span className="sm:hidden">Temps</span><span className="hidden sm:inline">Temps regardé</span></th>
+                </tr>
               </thead>
               <tbody className="tabular-nums">
                 {[...report.daily].reverse().map((d) => (
                   <tr key={d.day} className="border-t border-gray-100">
-                    <td className="py-1">{longDay(d.day)}</td><td>{fmtNum(d.visitors)}</td><td>{fmtNum(d.pageviews)}</td><td>{fmtNum(d.plays)}</td><td>{fmtDuration(d.watchSeconds)}</td>
+                    <td className="py-1.5">
+                      <span className="sm:hidden">{shortDay(d.day)}</span>
+                      <span className="hidden sm:inline">{longDay(d.day)}</span>
+                    </td>
+                    <td>{fmtNum(d.visitors)}</td><td>{fmtNum(d.pageviews)}</td><td>{fmtNum(d.plays)}</td><td>{fmtDuration(d.watchSeconds)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -289,35 +300,36 @@ export default function Stats({ data }) {
         {report.content.length === 0 ? (
           <p className="text-sm text-gray-500">Pas encore de lecture enregistrée.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-sm">
-              <thead className="text-left text-xs uppercase tracking-wide text-gray-500">
-                <tr><th className="py-2">Contenu</th><th className="text-right">Lancements</th><th className="text-right">Spectateurs</th><th className="w-1/3 pl-6">Temps regardé</th></tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {report.content.map((c) => {
-                  const n = contentName(c.target);
-                  return (
-                    <tr key={c.target}>
-                      <td className="py-2.5">
-                        <span className="font-medium">{n.title}</span>
-                        <span className="block text-xs text-gray-500">{n.sub}</span>
-                      </td>
-                      <td className="text-right tabular-nums">{fmtNum(c.plays)}</td>
-                      <td className="text-right tabular-nums">{fmtNum(c.viewers)}</td>
-                      <td className="pl-6">
-                        <div className="flex items-center gap-3">
-                          <div className="h-1.5 flex-1 rounded-full bg-brand/10">
-                            <div className="h-1.5 rounded-full bg-brand" style={{ width: `${(c.watchSeconds / maxWatch) * 100}%` }} />
-                          </div>
-                          <span className="w-20 shrink-0 text-right tabular-nums text-gray-700">{fmtDuration(c.watchSeconds)}</span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          // Liste (et non tableau large) : sur téléphone, chaque contenu s'empile sur deux lignes, sans défilement horizontal
+          <div>
+            <div className="hidden grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_minmax(0,1fr)] gap-4 py-2 text-xs uppercase tracking-wide text-gray-500 md:grid" aria-hidden="true">
+              <span>Contenu</span><span className="text-right">Lancements</span><span className="text-right">Spectateurs</span><span>Temps regardé</span>
+            </div>
+            <ul className="divide-y divide-gray-100">
+              {report.content.map((c) => {
+                const n = contentName(c.target);
+                return (
+                  <li key={c.target} className="grid grid-cols-2 gap-x-4 gap-y-1.5 py-3 text-sm md:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_minmax(0,1fr)] md:items-center">
+                    <div className="col-span-2 min-w-0 md:col-span-1">
+                      <span className="block truncate font-medium">{n.title}</span>
+                      <span className="block truncate text-xs text-gray-500">{n.sub}</span>
+                    </div>
+                    <span className="tabular-nums text-gray-700 md:text-right">
+                      {fmtNum(c.plays)}<span className="md:hidden"> {c.plays > 1 ? 'lancements' : 'lancement'}</span>
+                    </span>
+                    <span className="text-right tabular-nums text-gray-700">
+                      {fmtNum(c.viewers)}<span className="md:hidden"> {c.viewers > 1 ? 'spectateurs' : 'spectateur'}</span>
+                    </span>
+                    <div className="col-span-2 flex items-center gap-3 md:col-span-1">
+                      <div className="h-1.5 min-w-0 flex-1 rounded-full bg-brand/10">
+                        <div className="h-1.5 rounded-full bg-brand" style={{ width: `${(c.watchSeconds / maxWatch) * 100}%` }} />
+                      </div>
+                      <span className="w-16 shrink-0 text-right tabular-nums text-gray-700">{fmtDuration(c.watchSeconds)}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         )}
       </section>
@@ -345,7 +357,7 @@ export default function Stats({ data }) {
                 <tr key={p.path}>
                   <td className="py-2">{pageName(p.path)}</td>
                   <td className="text-right tabular-nums text-gray-600">{plural(p.views, 'vue', 'vues')}</td>
-                  <td className="w-32 text-right tabular-nums text-gray-500">{plural(p.visitors, 'visiteur', 'visiteurs')}</td>
+                  <td className="hidden w-32 text-right tabular-nums text-gray-500 sm:table-cell">{plural(p.visitors, 'visiteur', 'visiteurs')}</td>
                 </tr>
               ))}
             </tbody>

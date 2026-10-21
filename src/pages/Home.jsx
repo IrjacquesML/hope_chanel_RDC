@@ -16,6 +16,7 @@ export default function Home() {
   const pick = (flag) => (shows.some((s) => s[flag]) ? shows.filter((s) => s[flag]) : shows).slice(0, 4);
   const featured = pick('featured');
   const highlights = pick('highlight');
+  const latest = getSortedEpisodes().slice(0, 8);
 
   return (
     <>
@@ -28,7 +29,7 @@ export default function Home() {
             title={t('home.highlights')}
             subtitle={t('home.highlightsSub')}
             action={
-              <Link to="/emissions" className="inline-flex items-center gap-1 font-semibold text-brand hover:underline">
+              <Link to="/emissions" className="inline-flex min-h-[44px] items-center gap-1 font-semibold text-brand hover:underline">
                 {t('common.seeAll')} <ChevronRight className="h-4 w-4" />
               </Link>
             }
@@ -39,17 +40,20 @@ export default function Home() {
         </div>
       </section>
 
-      <section aria-labelledby="latest" className="bg-mist py-16">
-        <div className="container-page">
-          <SectionTitle id="latest" title={t('home.latest')} subtitle={t('home.latestSub')} />
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {getSortedEpisodes().slice(0, 8).map((e) => <EpisodeCard key={e.id} episode={e} />)}
+      {/* Section masquée tant qu'aucun épisode n'est publié depuis l'admin */}
+      {latest.length > 0 && (
+        <section aria-labelledby="latest" className="bg-mist py-16">
+          <div className="container-page">
+            <SectionTitle id="latest" title={t('home.latest')} subtitle={t('home.latestSub')} />
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {latest.map((e) => <EpisodeCard key={e.id} episode={e} />)}
+            </div>
+            <div className="mt-10 text-center">
+              <Link to="/episodes" className="btn-primary px-7 py-3 text-base">{t('common.seeAllEpisodes')}</Link>
+            </div>
           </div>
-          <div className="mt-10 text-center">
-            <Link to="/episodes" className="btn-primary px-7 py-3 text-base">{t('common.seeAllEpisodes')}</Link>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <DonateBanner />
       <HowToWatch />

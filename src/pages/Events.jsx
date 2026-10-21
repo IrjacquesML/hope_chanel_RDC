@@ -1,5 +1,6 @@
 import PageHeader from '../components/PageHeader';
 import Img from '../components/Img';
+import EmptyState from '../components/EmptyState';
 import { Calendar, Clock, MapPin } from '../components/Icons';
 import { formatDate } from '../lib';
 import { useLang } from '../i18n/LanguageContext';
@@ -14,7 +15,8 @@ export default function Events() {
   return (
     <>
       <PageHeader title={t('events.title')} intro={t('events.intro')} />
-      <section className="container-page grid gap-6 py-12 md:grid-cols-2">
+      {events.length === 0 && <div className="container-page py-12"><EmptyState /></div>}
+      <section className={`container-page grid gap-6 py-12 md:grid-cols-2 ${events.length ? '' : 'hidden'}`}>
         {events.map((e) => (
           <article key={e.id} className="card group flex flex-col sm:flex-row">
             <div className="relative aspect-video overflow-hidden sm:aspect-auto sm:w-2/5">

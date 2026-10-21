@@ -83,7 +83,7 @@ export function Newsletter() {
   return (
     <section aria-labelledby="newsletter-title" className="py-16">
       <div className="container-page">
-        <div className="mx-auto max-w-3xl rounded-3xl bg-mist p-8 text-center sm:p-12">
+        <div className="mx-auto max-w-3xl rounded-3xl bg-mist p-6 text-center sm:p-12">
           <h2 id="newsletter-title" className="text-2xl font-bold sm:text-3xl">{t('home.newsletterTitle')}</h2>
           <p className="mx-auto mt-3 max-w-xl text-gray-600">{t('home.newsletterText')}</p>
           {done ? (

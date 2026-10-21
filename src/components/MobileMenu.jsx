@@ -82,11 +82,16 @@ export default function MobileMenu({ open, onClose, nav, burgerRef }) {
     }`;
 
   return createPortal(
-    <div className="xl:hidden" aria-hidden={!open}>
+    // Boîte fixe de la taille de l'écran, qui rogne le panneau quand il est rangé à droite :
+    // sur mobile, un élément caché hors écran permettrait sinon de « balayer » la page horizontalement.
+    <div
+      className={`fixed inset-x-0 bottom-0 top-16 z-40 overflow-hidden xl:hidden ${open ? '' : 'pointer-events-none invisible delay-300'}`}
+      aria-hidden={!open}
+    >
       {/* Voile */}
       <div
         onClick={onClose}
-        className={`fixed inset-x-0 bottom-0 top-16 z-40 bg-ink/50 transition-opacity duration-300 ${open ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+        className={`absolute inset-0 bg-ink/50 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`}
       />
       {/* Panneau */}
       <div
@@ -95,8 +100,8 @@ export default function MobileMenu({ open, onClose, nav, burgerRef }) {
         role="dialog"
         aria-modal="true"
         aria-label={t('common.menu')}
-        className={`fixed bottom-0 right-0 top-16 z-40 flex w-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-out sm:max-w-md ${
-          open ? 'translate-x-0' : 'invisible translate-x-full'
+        className={`absolute inset-y-0 right-0 flex w-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-out sm:max-w-md ${
+          open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-6 pt-4">

@@ -138,8 +138,8 @@ export default function Header() {
 
   return (
     <header className={`sticky top-0 z-50 bg-white/95 backdrop-blur transition-shadow ${scrolled ? 'shadow-md' : 'border-b border-gray-100'}`}>
-      <div className="container-page flex h-16 items-center justify-between gap-4 xl:h-20">
-        <Link to="/" aria-label="Hope Chanel RDC — Accueil" className="shrink-0">
+      <div className="container-page flex h-16 items-center justify-between gap-3 xl:h-20">
+        <Link to="/" aria-label="Hope Channel RDC — Accueil" className="flex shrink-0 items-center py-2">
           <Logo />
         </Link>
 
@@ -163,7 +163,7 @@ export default function Header() {
           </ul>
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <LangSwitch className="hidden sm:inline-flex" />
           <Link to="/dons" className="btn-accent hidden sm:inline-flex">
             <Heart className="h-4 w-4" />

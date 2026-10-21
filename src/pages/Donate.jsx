@@ -12,7 +12,7 @@ const OPERATORS = ['M-Pesa (Vodacom)', 'Orange Money', 'Airtel Money', 'Afrimone
 function Choice({ name, value, checked, onChange, children }) {
   return (
     <label
-      className={`flex cursor-pointer items-center justify-center rounded-xl border-2 px-4 py-3 text-center font-heading font-semibold transition focus-within:ring-2 focus-within:ring-accent ${checked ? 'border-brand bg-brand text-white' : 'border-gray-200 bg-white text-ink hover:border-brand'}`}
+      className={`flex cursor-pointer items-center justify-center min-h-[48px] rounded-xl border-2 px-2 py-2.5 text-center font-heading text-sm font-semibold sm:px-4 sm:text-base transition focus-within:ring-2 focus-within:ring-accent ${checked ? 'border-brand bg-brand text-white' : 'border-gray-200 bg-white text-ink hover:border-brand'}`}
     >
       <input type="radio" className="sr-only" name={name} value={value} checked={checked} onChange={() => onChange(value)} />
       {children}
@@ -37,7 +37,8 @@ const fmt = (n, cur, lang) => {
 };
 
 export default function Donate({ regular = false }) {
-  const { t, lang } = useLang();
+  const { t, tr, lang } = useLang();
+  const quote = content.testimonials[1] || content.testimonials[0];
   useSeo({ title: regular ? t('donate.regularTitle') : t('donate.title'), description: t('donate.intro') });
 
   const [f, setF] = useState({
@@ -98,7 +99,7 @@ export default function Donate({ regular = false }) {
       <section className="container-page grid gap-10 py-12 lg:grid-cols-5">
         <div className="lg:col-span-3">
           {done ? (
-            <div role="status" className="rounded-3xl bg-green-50 p-10 text-center ring-1 ring-green-200">
+            <div role="status" className="rounded-3xl bg-green-50 p-6 text-center sm:p-10 ring-1 ring-green-200">
               <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-600 text-white"><Check className="h-8 w-8" /></span>
               <h2 className="mt-5 text-2xl font-bold">{t('donate.thanks')}</h2>
               <p className="mt-2 text-gray-700">
@@ -107,7 +108,7 @@ export default function Donate({ regular = false }) {
               <Link to="/" className="btn-primary mt-6">{t('common.home')}</Link>
             </div>
           ) : (
-            <form onSubmit={submit} noValidate className="space-y-8 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/5 sm:p-8">
+            <form onSubmit={submit} noValidate className="space-y-8 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-black/5 min-[360px]:p-5 sm:p-8">
               <fieldset>
                 <legend className="label text-base">{t('donate.frequency')}</legend>
                 <div className="grid grid-cols-2 gap-3">
@@ -124,7 +125,7 @@ export default function Donate({ regular = false }) {
                     <select
                       value={f.currency}
                       onChange={(e) => setF((s) => ({ ...s, currency: e.target.value, amount: PRESETS[e.target.value][1], other: '' }))}
-                      className="rounded-lg border border-gray-300 px-2 py-1"
+                      className="h-10 rounded-lg border border-gray-300 px-2"
                     >
                       <option value="USD">USD ($)</option>
                       <option value="CDF">CDF (FC)</option>
@@ -214,7 +215,7 @@ export default function Donate({ regular = false }) {
         </div>
 
         <aside className="space-y-6 lg:col-span-2">
-          <div className="rounded-3xl bg-brand p-8 text-white">
+          <div className="rounded-3xl bg-brand p-6 text-white sm:p-8">
             <h2 className="text-xl font-bold text-white">{t('donate.regularTitle')}</h2>
             <p className="mt-3 text-white/85">{t('donate.regularText')}</p>
             <ul className="mt-6 space-y-4">
@@ -226,11 +227,14 @@ export default function Donate({ regular = false }) {
               ))}
             </ul>
           </div>
-          <figure className="rounded-3xl bg-mist p-8">
-            <blockquote className="text-lg italic text-gray-800">{content.testimonials[1].text[lang]}</blockquote>
-            <figcaption className="mt-3 font-semibold text-brand">— {content.testimonials[1].name}</figcaption>
-            <Link to="/dons/temoignages" className="mt-4 inline-block text-sm font-semibold text-brand hover:underline">{t('nav.testimonials')} →</Link>
-          </figure>
+          {/* Témoignage mis en avant : le premier de la liste gérée dans l'admin (bloc masqué si la liste est vide) */}
+          {quote && (
+            <figure className="rounded-3xl bg-mist p-6 sm:p-8">
+              <blockquote className="text-lg italic text-gray-800">{tr(quote.text)}</blockquote>
+              <figcaption className="mt-3 font-semibold text-brand">— {quote.name}</figcaption>
+              <Link to="/dons/temoignages" className="-ml-1 mt-3 inline-flex min-h-[44px] items-center px-1 text-sm font-semibold text-brand hover:underline">{t('nav.testimonials')} →</Link>
+            </figure>
+          )}
         </aside>
       </section>
     </>

@@ -24,7 +24,7 @@ export default function Network() {
             </li>
           ))}
         </ul>
-        <div className="mt-10 flex flex-col items-start gap-4 rounded-3xl bg-mist p-8 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 flex flex-col items-start gap-4 rounded-3xl bg-mist p-6 sm:flex-row sm:p-8 sm:items-center sm:justify-between">
           <p className="font-heading text-lg font-semibold">{t('network.partner')}</p>
           <Link to="/contact" className="btn-primary">{t('network.partnerCta')}</Link>
         </div>

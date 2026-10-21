@@ -72,7 +72,7 @@ export default function Contact() {
         <aside className="space-y-6 lg:col-span-2">
           <ul className="space-y-4 rounded-3xl bg-mist p-6">
             <li className="flex gap-3"><MapPin className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><span><strong className="block">{t('contact.address')}</strong>{contact.address}</span></li>
-            <li className="flex gap-3"><Phone className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><span><strong className="block">{t('contact.phone')}</strong>{contact.phones.map((p) => <a key={p} href={`tel:${p.replace(/\s/g, '')}`} className="block hover:text-brand">{p}</a>)}</span></li>
+            <li className="flex gap-3"><Phone className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><span><strong className="block">{t('contact.phone')}</strong>{contact.phones.map((p) => <a key={p} href={`tel:${p.replace(/\s/g, '')}`} className="flex min-h-[40px] items-center hover:text-brand">{p}</a>)}</span></li>
             <li className="flex gap-3"><WhatsApp className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><span><strong className="block">WhatsApp</strong><a href={content.social.whatsapp} className="hover:text-brand">{contact.whatsapp}</a></span></li>
             <li className="flex gap-3"><Mail className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><span><strong className="block">E-mail</strong><a href={`mailto:${contact.email}`} className="hover:text-brand">{contact.email}</a></span></li>
           </ul>
