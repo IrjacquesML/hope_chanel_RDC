@@ -4,8 +4,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        brand: { DEFAULT: '#0B3C7A', dark: '#082C5A', light: '#1E5BA8' },
-        accent: { DEFAULT: '#F59E0B', dark: '#D97706' },
+        // Couleurs modifiables depuis l'administration (Paramètres → Apparence) : variables CSS « R G B ».
+        brand: { DEFAULT: 'rgb(var(--brand) / <alpha-value>)', dark: 'rgb(var(--brand-dark) / <alpha-value>)', light: 'rgb(var(--brand-light) / <alpha-value>)' },
+        accent: { DEFAULT: 'rgb(var(--accent) / <alpha-value>)', dark: 'rgb(var(--accent-dark) / <alpha-value>)' },
         mist: '#F3F4F6',
         ink: '#111827',
       },

@@ -2,93 +2,105 @@
 import express from 'express';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
-import { existsSync, mkdirSync } from 'node:fs';
+import { Readable } from 'node:stream';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildSitemap } from '../scripts/sitemap-lib.mjs';
 import { createStats } from './stats.js';
+import { createAuth } from './auth.js';
+import { MEDIAMTX_HLS, pathReady, relayState, startMediamtx } from './mediamtx.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = path.join(ROOT, 'src', 'data');
 const BACKUP_DIR = path.join(ROOT, 'backups');
 const UPLOAD_DIR = path.join(ROOT, 'uploads');
 const DIST_DIR = path.join(ROOT, 'dist');
-const FILES = ['shows', 'schedule', 'content'];
+const DB_DIR = path.join(ROOT, 'db');
+// Réglages confidentiels (clés de diffusion, connexions OBS / vMix) : jamais servis au public.
+const PRIVATE_FILE = path.join(DB_DIR, 'private.json');
+const FILES = ['shows', 'schedule', 'content', 'settings'];
 
 const PORT = Number(process.env.PORT) || 3001;
-const EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-const PASSWORD = process.env.ADMIN_PASSWORD;
+const ENV_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+const ENV_PASSWORD = process.env.ADMIN_PASSWORD;
 const PROD = process.env.NODE_ENV === 'production';
-const SESSION_HOURS = 8;
 const MAX_BACKUPS_PER_FILE = 30;
 
-if (!PASSWORD || PASSWORD.length < 8) {
-  console.error('ADMIN_PASSWORD manquant ou trop court (8 caractères min.) : définissez-le dans le fichier .env');
-  process.exit(1);
-}
-if (!EMAIL) {
-  console.error('ADMIN_EMAIL manquant : définissez-le dans le fichier .env');
-  process.exit(1);
+for (const dir of [BACKUP_DIR, UPLOAD_DIR, DB_DIR]) if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+
+/* ---------- Réglages confidentiels ---------- */
+const DEST_KEYS = ['selfhost', 'youtube', 'facebook', 'tiktok', 'jetstream', 'custom'];
+const DEFAULT_PRIVATE = {
+  streaming: {
+    primary: 'youtube',
+    destinations: {
+      selfhost: { enabled: false, server: 'rtmp://localhost:1935', key: '' },
+      youtube: { enabled: true, server: 'rtmp://a.rtmp.youtube.com/live2', key: '' },
+      facebook: { enabled: false, server: 'rtmps://live-api-s.facebook.com:443/rtmp/', key: '' },
+      tiktok: { enabled: false, server: '', key: '' },
+      jetstream: { enabled: false, server: '', key: '' },
+      custom: { enabled: false, label: 'Autre plateforme', server: '', key: '' },
+    },
+    obs: { host: 'localhost', port: 4455, password: '' },
+    vmix: { host: '', port: 8088 },
+  },
+};
+
+/** Lit db/private.json en complétant les valeurs manquantes par les valeurs par défaut. */
+function readPrivateSync() {
+  try {
+    const saved = JSON.parse(readFileSync(PRIVATE_FILE, 'utf8'));
+    const d = DEFAULT_PRIVATE.streaming;
+    const st = saved.streaming || {};
+    return {
+      streaming: {
+        ...d,
+        ...st,
+        destinations: Object.fromEntries(DEST_KEYS.map((k) => [k, { ...d.destinations[k], ...st.destinations?.[k] }])),
+        obs: { ...d.obs, ...st.obs },
+        vmix: { ...d.vmix, ...st.vmix },
+      },
+    };
+  } catch {
+    return structuredClone(DEFAULT_PRIVATE);
+  }
 }
 
-for (const dir of [BACKUP_DIR, UPLOAD_DIR]) if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+let privateData = readPrivateSync();
+
+/**
+ * Direct auto-hébergé : vMix envoie vers rtmp://…:1935/live avec la clé comme « Stream Name ».
+ * MediaMTX reçoit donc le flux sur le chemin live/<clé> ; les visiteurs le lisent sur /hls/live/ sans jamais voir la clé.
+ */
+const livePath = () => `live/${privateData.streaming.destinations.selfhost.key}`;
+const sameSecret = (a, b) => a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+
+// Ancien compte unique (identifiants modifiés depuis l'administration) : repris comme premier administrateur.
+let legacyAdmin = null;
+try {
+  const admin = JSON.parse(readFileSync(PRIVATE_FILE, 'utf8')).admin;
+  if (admin?.passwordHash) legacyAdmin = { email: admin.email || ENV_EMAIL, passwordHash: admin.passwordHash };
+} catch {
+  /* pas encore de fichier */
+}
+
+async function writePrivate(next) {
+  const tmp = PRIVATE_FILE + '.tmp';
+  await fs.writeFile(tmp, JSON.stringify(next, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 });
+  await fs.rename(tmp, PRIVATE_FILE);
+  privateData = next;
+}
 
 const stats = createStats(ROOT);
+const auth = createAuth({ dbDir: DB_DIR, prod: PROD, envEmail: ENV_EMAIL, envPassword: ENV_PASSWORD, legacyAdmin });
+const { requireAuth, requireRole, isAuthed, canWriteFile } = auth;
 
 const app = express();
 app.disable('x-powered-by');
 // Derrière un proxy (Nginx, hébergeur), TRUST_PROXY=1 permet de lire la vraie IP du visiteur.
 app.set('trust proxy', process.env.TRUST_PROXY === '1');
 app.use(express.json({ limit: '8mb' }));
-
-/* ---------- Sessions (en mémoire) ---------- */
-const sessions = new Map(); // token -> expiration (ms)
-const COOKIE = 'hc_admin';
-
-function readCookie(req, name) {
-  const match = (req.headers.cookie || '').split(/;\s*/).find((c) => c.startsWith(name + '='));
-  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
-}
-
-function isAuthed(req) {
-  const token = readCookie(req, COOKIE);
-  const exp = token && sessions.get(token);
-  if (!exp) return false;
-  if (exp < Date.now()) {
-    sessions.delete(token);
-    return false;
-  }
-  return true;
-}
-
-function requireAuth(req, res, next) {
-  if (!isAuthed(req)) return res.status(401).json({ error: 'Non authentifié' });
-  next();
-}
-
-function setSessionCookie(res, token, maxAgeSec) {
-  const parts = [`${COOKIE}=${token}`, 'Path=/', 'HttpOnly', 'SameSite=Strict', `Max-Age=${maxAgeSec}`];
-  if (PROD) parts.push('Secure');
-  res.setHeader('Set-Cookie', parts.join('; '));
-}
-
-function safeEqual(a, b) {
-  const ha = crypto.createHash('sha256').update(String(a)).digest();
-  const hb = crypto.createHash('sha256').update(String(b)).digest();
-  return crypto.timingSafeEqual(ha, hb);
-}
-
-/* Limitation des tentatives : 5 échecs par IP => blocage 15 min */
-const attempts = new Map();
-function tooManyAttempts(ip) {
-  const a = attempts.get(ip);
-  return a && a.count >= 5 && Date.now() - a.first < 15 * 60_000;
-}
-function recordFailure(ip) {
-  const a = attempts.get(ip);
-  if (!a || Date.now() - a.first > 15 * 60_000) attempts.set(ip, { count: 1, first: Date.now() });
-  else a.count++;
-}
 
 /* ---------- Données ---------- */
 const filePath = (name) => path.join(DATA_DIR, `${name}.json`);
@@ -151,8 +163,88 @@ function validate(name, d) {
   if (name === 'content') {
     for (const k of ['contact', 'social', 'live']) if (!isObj(d[k])) return `Section « ${k} » manquante`;
     for (const k of ['events', 'news', 'team', 'testimonials', 'network']) if (!Array.isArray(d[k])) return `La section « ${k} » doit être une liste`;
+    if (d.contact.email && !EMAIL_RE.test(d.contact.email)) return 'Adresse e-mail de contact invalide';
+    if (!Array.isArray(d.contact.phones)) return 'Les téléphones doivent être une liste';
+    for (const [k, v] of Object.entries(d.social)) if (v && !/^https:\/\//.test(v)) return `Le lien « ${k} » doit commencer par https://`;
+  }
+  if (name === 'settings') {
+    for (const k of ['site', 'appearance', 'announcement', 'maintenance', 'integrations']) if (!isObj(d[k])) return `Section « ${k} » manquante`;
+    if (!String(d.site.name || '').trim()) return 'Le nom du site est obligatoire';
+    if (!/^https?:\/\/[^\s/]+/.test(d.site.url || '')) return 'Adresse du site invalide (ex. : https://www.hopechanelrdc.org)';
+    for (const [k, v] of Object.entries(d.appearance)) if (!/^#[\da-fA-F]{6}$/.test(v)) return `Couleur invalide : « ${k} »`;
+    if (d.integrations.googleAnalyticsId && !/^G-[A-Z0-9]{4,}$/.test(d.integrations.googleAnalyticsId)) return 'Identifiant Google Analytics invalide (format G-XXXXXXX)';
+    if (d.announcement.link && !/^(https:\/\/|\/)/.test(d.announcement.link)) return 'Le lien de l’annonce doit commencer par https:// ou /';
   }
   return null;
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const HOST_RE = /^[a-zA-Z0-9.-]{1,253}$/;
+const STREAM_URL_RE = /^(rtmps?|srt):\/\/\S+$/;
+
+function validatePrivateStreaming(st) {
+  if (!isObj(st) || !isObj(st.destinations) || !isObj(st.obs) || !isObj(st.vmix)) return 'Structure invalide';
+  if (!DEST_KEYS.includes(st.primary)) return 'Destination principale inconnue';
+  for (const k of DEST_KEYS) {
+    const dest = st.destinations[k];
+    if (!isObj(dest)) return `Destination « ${k} » manquante`;
+    if (dest.server && !STREAM_URL_RE.test(dest.server.trim())) return `Serveur de « ${k} » invalide : il doit commencer par rtmp://, rtmps:// ou srt://`;
+    if (typeof dest.key !== 'string' || dest.key.length > 500) return `Clé de « ${k} » invalide`;
+  }
+  for (const k of ['obs', 'vmix']) {
+    const { host, port } = st[k];
+    if (typeof host !== 'string' || (host && !HOST_RE.test(host.trim()))) return `Adresse ${k.toUpperCase()} invalide (nom ou IP, sans http://)`;
+    if (!Number.isInteger(port) || port < 1 || port > 65535) return `Port ${k.toUpperCase()} invalide`;
+  }
+  return null;
+}
+
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+/**
+ * Production : injecte dans index.html les paramètres du site (titre, description, favicon, partage, données structurées),
+ * pour que moteurs de recherche et réseaux sociaux voient les valeurs définies dans l'administration.
+ */
+function renderIndex(html, settings, content, pathname) {
+  const { site, appearance, integrations } = settings;
+  const base = site.url.replace(/\/+$/, '');
+  const abs = (u) => (/^https?:/.test(u) ? u : base + u);
+  const title = site.tagline?.fr ? `${site.name} — ${site.tagline.fr}` : site.name;
+  const description = site.description?.fr || '';
+  const { contact } = content;
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'TelevisionChannel',
+    name: site.name,
+    url: base + '/',
+    logo: abs(site.logo),
+    broadcastServiceTier: 'Free',
+    inLanguage: ['fr', 'en'],
+    ...(contact.phones[0] && { telephone: contact.phones[0].replace(/\s/g, '') }),
+    ...(contact.email && { email: contact.email }),
+    ...(contact.address && { address: { '@type': 'PostalAddress', streetAddress: contact.address, addressCountry: 'CD' } }),
+    ...(contact.map && { geo: { '@type': 'GeoCoordinates', latitude: contact.map.lat, longitude: contact.map.lon } }),
+    sameAs: Object.values(content.social).filter(Boolean),
+  };
+  const extra = [
+    integrations.googleSiteVerification && `<meta name="google-site-verification" content="${escapeHtml(integrations.googleSiteVerification)}" />`,
+    integrations.bingSiteVerification && `<meta name="msvalidate.01" content="${escapeHtml(integrations.bingSiteVerification)}" />`,
+  ].filter(Boolean);
+  return html
+    .replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(title)}</title>`)
+    .replace(/(<meta name="description" content=")[^"]*/, `$1${escapeHtml(description)}`)
+    .replace(/(<meta name="theme-color" content=")[^"]*/, `$1${escapeHtml(appearance.brand)}`)
+    .replace(/(<link rel="icon"[^>]*href=")[^"]*/, `$1${escapeHtml(site.favicon)}`)
+    .replace(/(<link rel="apple-touch-icon" href=")[^"]*/, `$1${escapeHtml(site.favicon)}`)
+    .replace(/(<link rel="preload" as="image" href=")[^"]*("[^>]*type=")[^"]*/, `$1${escapeHtml(site.logo)}$2${site.logo.endsWith('.png') ? 'image/png' : site.logo.endsWith('.jpg') ? 'image/jpeg' : 'image/webp'}`)
+    .replace(/(<link rel="canonical" href=")[^"]*/, `$1${escapeHtml(base + pathname)}`)
+    .replace(/(<meta property="og:site_name" content=")[^"]*/, `$1${escapeHtml(site.name)}`)
+    .replace(/(<meta property="og:title" content=")[^"]*/, `$1${escapeHtml(title)}`)
+    .replace(/(<meta property="og:description" content=")[^"]*/, `$1${escapeHtml(description)}`)
+    .replace(/(<meta property="og:url" content=")[^"]*/, `$1${escapeHtml(base + pathname)}`)
+    .replace(/(<meta property="og:image" content=")[^"]*/, `$1${escapeHtml(abs(site.ogImage))}`)
+    .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`)
+    .replace('</head>', `${extra.join('\n    ')}\n  </head>`);
 }
 
 /** Le programme ne doit référencer que des émissions existantes. */
@@ -169,39 +261,177 @@ async function checkReferences(name, d) {
 }
 
 /* ---------- Routes API ---------- */
-app.get('/api/data', async (_req, res, next) => {
+app.get('/api/data', async (req, res, next) => {
   try {
-    const [shows, schedule, content] = await Promise.all(FILES.map(readData));
-    res.set('Cache-Control', 'no-cache').json({ shows, schedule, content });
+    const [shows, schedule, content, settings] = await Promise.all(FILES.map(readData));
+    // viewer.admin : un membre de l'équipe connecté voit le site même en mode maintenance.
+    res.set('Cache-Control', 'no-cache').json({ shows, schedule, content, settings, viewer: { admin: isAuthed(req) } });
   } catch (e) {
     next(e);
   }
 });
 
-app.post('/api/login', (req, res) => {
-  const ip = req.ip;
-  if (tooManyAttempts(ip)) return res.status(429).json({ error: 'Trop de tentatives. Réessayez dans 15 minutes.' });
-  // Les deux comparaisons sont toujours effectuées (pas d'indice sur le champ erroné).
-  const emailOk = safeEqual(String(req.body?.email ?? '').trim().toLowerCase(), EMAIL);
-  const passwordOk = safeEqual(req.body?.password ?? '', PASSWORD);
-  if (!emailOk || !passwordOk) {
-    recordFailure(ip);
-    return res.status(401).json({ error: 'E-mail ou mot de passe incorrect' });
+/* ---------- Comptes, connexion, mot de passe : voir server/auth.js ---------- */
+app.use('/api', auth.router);
+
+/* ---------- Réglages confidentiels (administrateur et technicien régie) ---------- */
+const streamingRoles = requireRole('admin', 'technician');
+
+app.get('/api/private', streamingRoles, (_req, res) => {
+  res.set('Cache-Control', 'no-store').json({ streaming: privateData.streaming });
+});
+
+app.put('/api/private/streaming', streamingRoles, async (req, res, next) => {
+  const error = validatePrivateStreaming(req.body);
+  if (error) return res.status(400).json({ error });
+  const st = req.body;
+  const streaming = {
+    primary: st.primary,
+    destinations: Object.fromEntries(
+      DEST_KEYS.map((k) => {
+        const d = st.destinations[k];
+        const clean = { enabled: Boolean(d.enabled), server: String(d.server || '').trim(), key: d.key.trim() };
+        if (k === 'selfhost') Object.assign(clean, { enabled: true, key: privateData.streaming.destinations.selfhost.key }); // clé créée par le serveur
+        if (k === 'custom') clean.label = String(d.label || '').slice(0, 60);
+        return [k, clean];
+      }),
+    ),
+    obs: { host: st.obs.host.trim(), port: st.obs.port, password: String(st.obs.password || '') },
+    vmix: { host: st.vmix.host.trim(), port: st.vmix.port },
+  };
+  try {
+    await writePrivate({ streaming });
+    liveCache.at = 0;
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
   }
-  attempts.delete(ip);
-  const token = crypto.randomBytes(32).toString('hex');
-  sessions.set(token, Date.now() + SESSION_HOURS * 3600_000);
-  setSessionCookie(res, token, SESSION_HOURS * 3600);
-  res.json({ ok: true });
 });
 
-app.post('/api/logout', (req, res) => {
-  sessions.delete(readCookie(req, COOKIE));
-  setSessionCookie(res, '', 0);
-  res.json({ ok: true });
+/* ---------- vMix (API web, port 8088) : relayée par le serveur, qui doit pouvoir joindre le PC vMix ---------- */
+const VMIX_FUNCTIONS = new Set(['StartStreaming', 'StopStreaming', 'StartRecording', 'StopRecording', 'Cut', 'Fade', 'PreviewInput']);
+
+async function vmixCall(query = '') {
+  const { host, port } = privateData.streaming.vmix;
+  if (!host) throw Object.assign(new Error('Adresse de vMix non configurée'), { status: 400 });
+  let r;
+  try {
+    r = await fetch(`http://${host}:${port}/api/${query}`, { signal: AbortSignal.timeout(4000) });
+  } catch {
+    throw Object.assign(new Error(`vMix injoignable à ${host}:${port}. Vérifiez que vMix est ouvert, que l’API web est activée et que le pare-feu autorise le port.`), { status: 502 });
+  }
+  if (!r.ok) throw Object.assign(new Error(`vMix a répondu : erreur ${r.status}`), { status: 502 });
+  return r.text();
+}
+
+const xmlDecode = (s) => s.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+const xmlTag = (xml, tag) => new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`).exec(xml)?.[1];
+// <streaming>True</streaming> ou, selon les versions, <streaming channel1="True" …>
+const xmlFlag = (xml, tag) => new RegExp(`<${tag}[^>]*>True<|<${tag}[^>]*="True"`).test(xml);
+
+app.get('/api/vmix/status', streamingRoles, async (_req, res) => {
+  try {
+    const xml = await vmixCall();
+    const inputs = [...xml.matchAll(/<input\s([^>]*)>/g)].map(([, attrs]) => {
+      const attr = (n) => new RegExp(`\\b${n}="([^"]*)"`).exec(attrs)?.[1] || '';
+      return { number: Number(attr('number')), title: xmlDecode(attr('title')), type: attr('type') };
+    });
+    res.json({
+      version: xmlTag(xml, 'version'),
+      edition: xmlTag(xml, 'edition'),
+      streaming: xmlFlag(xml, 'streaming'),
+      recording: xmlFlag(xml, 'recording'),
+      active: Number(xmlTag(xml, 'active')),
+      preview: Number(xmlTag(xml, 'preview')),
+      inputs,
+    });
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.message });
+  }
 });
 
-app.get('/api/me', (req, res) => res.json({ authenticated: isAuthed(req) }));
+/**
+ * Statut public du direct, pour le site : le flux de vMix arrive-t-il ? Aucune donnée confidentielle (ni adresse, ni clé). onAir = null si vMix n'est pas configuré ou injoignable.
+ * vMix est interrogé au plus toutes les 10 s, quel que soit le nombre de visiteurs.
+ */
+let liveCache = { at: 0, value: null, pending: null };
+async function liveStatus() {
+  if (Date.now() - liveCache.at < 10_000) return liveCache.value;
+  liveCache.pending ||= (async () => {
+    // Le flux de vMix arrive-t-il sur MediaMTX ? Sans MediaMTX, on demande à vMix (même réseau local).
+    let onAir = await pathReady(livePath());
+    if (onAir === null && privateData.streaming.vmix.host) {
+      try {
+        onAir = xmlFlag(await vmixCall(), 'streaming');
+      } catch {
+        /* vMix éteint ou injoignable : statut inconnu */
+      }
+    }
+    liveCache = { at: Date.now(), value: { onAir }, pending: null };
+    return liveCache.value;
+  })();
+  return liveCache.pending;
+}
+
+app.get('/api/live', async (_req, res) => {
+  res.set('Cache-Control', 'no-store').json(await liveStatus());
+});
+
+/**
+ * MediaMTX demande ici si une connexion est autorisée (authMethod: http).
+ * Lecture : libre (la vidéo n'est servie que sur 127.0.0.1, puis relayée par /hls/). Diffusion : seulement avec la bonne clé.
+ */
+const isLoopback = (ip = '') => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip);
+app.post('/api/mediamtx/auth', (req, res) => {
+  if (!isLoopback(req.socket.remoteAddress)) return res.status(403).end(); // seul MediaMTX, sur la même machine
+  const { action, path: p = '' } = req.body || {};
+  if (action === 'read' || action === 'playback') return res.status(200).end();
+  const ok = action === 'publish' && sameSecret(p, livePath());
+  if (ok) liveCache.at = 0;
+  res.status(ok ? 200 : 401).end();
+});
+
+/** Check-liste de l'onglet Diffusion : relais démarré ? image de vMix reçue ? */
+app.get('/api/selfhost/status', streamingRoles, async (_req, res) => {
+  const { relay, paths } = await relayState();
+  const mine = livePath();
+  res.set('Cache-Control', 'no-store').json({
+    relay,
+    receiving: paths.some((p) => p.name === mine && p.ready),
+    // vMix envoie ailleurs (ancienne adresse, mauvaise clé) : on l'indique sans révéler de clé
+    elsewhere: paths.filter((p) => p.ready && p.name !== mine).map((p) => (p.name.startsWith('live/') ? 'live/(autre clé)' : p.name)),
+    key: privateData.streaming.destinations.selfhost.key,
+  });
+});
+
+/** Nouvelle clé (si l'ancienne a été divulguée) : à recopier ensuite dans vMix. */
+app.post('/api/selfhost/key', streamingRoles, async (_req, res, next) => {
+  try {
+    const next_ = structuredClone(privateData);
+    next_.streaming.destinations.selfhost.key = crypto.randomBytes(10).toString('hex');
+    await writePrivate({ streaming: next_.streaming });
+    res.json({ key: next_.streaming.destinations.selfhost.key });
+  } catch (e) {
+    next(e);
+  }
+});
+
+app.post('/api/vmix/function', streamingRoles, async (req, res) => {
+  const { name, input } = req.body || {};
+  if (!VMIX_FUNCTIONS.has(name)) return res.status(400).json({ error: 'Commande vMix non autorisée' });
+  const params = new URLSearchParams({ Function: name });
+  if (input !== undefined) {
+    if (!Number.isInteger(input) || input < 1) return res.status(400).json({ error: 'Numéro d’entrée invalide' });
+    params.set('Input', String(input));
+  }
+  try {
+    await vmixCall(`?${params}`);
+    liveCache.at = 0; // le site voit tout de suite le début ou la fin du direct
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.message });
+  }
+});
 
 app.put('/api/data/:file', requireAuth, async (req, res, next) => {
   const { file } = req.params;
@@ -210,6 +440,9 @@ app.put('/api/data/:file', requireAuth, async (req, res, next) => {
   if (!error) error = await checkReferences(file, req.body);
   if (error) return res.status(400).json({ error });
   try {
+    // Chaque rôle ne peut modifier que ses sections (ex. : le technicien régie, uniquement le lecteur du direct).
+    const forbidden = canWriteFile(req.user, file, await readData(file), req.body);
+    if (forbidden) return res.status(403).json({ error: forbidden });
     await writeData(file, req.body);
     res.json({ ok: true });
   } catch (e) {
@@ -232,13 +465,13 @@ app.post('/api/upload', requireAuth, async (req, res, next) => {
   }
 });
 
-app.get('/api/backups', requireAuth, async (_req, res) => {
+app.get('/api/backups', requireRole('admin'), async (_req, res) => {
   const files = (await fs.readdir(BACKUP_DIR)).filter((f) => f.endsWith('.json')).sort().reverse();
   res.json(files);
 });
 
-app.post('/api/backups/:name/restore', requireAuth, async (req, res, next) => {
-  const m = /^(shows|schedule|content)-[\dTZ-]+\.json$/.exec(req.params.name);
+app.post('/api/backups/:name/restore', requireRole('admin'), async (req, res, next) => {
+  const m = /^(shows|schedule|content|settings)-[\dTZ-]+\.json$/.exec(req.params.name);
   if (!m) return res.status(400).json({ error: 'Sauvegarde invalide' });
   try {
     const data = JSON.parse(await fs.readFile(path.join(BACKUP_DIR, req.params.name), 'utf8'));
@@ -286,19 +519,43 @@ app.get('/api/stats/export.csv', requireAuth, (req, res) => {
 
 app.get('/sitemap.xml', async (_req, res, next) => {
   try {
-    res.type('application/xml').send(buildSitemap((await readData('shows')).shows).xml);
+    const [{ shows }, settings] = await Promise.all([readData('shows'), readData('settings')]);
+    res.type('application/xml').send(buildSitemap(shows, process.env.SITE_URL || settings.site.url).xml);
   } catch (e) {
     next(e);
   }
 });
 
 app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '30d', immutable: true }));
+
+/* ---------- Vidéo du direct : MediaMTX (HLS) relayé sur /hls/, même adresse et même HTTPS que le site ---------- */
+app.get(/^\/hls\/live\/(\w[\w.-]*)$/, async (req, res) => {
+  const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  let r;
+  try {
+    // Les listes de lecture LL-HLS peuvent attendre le segment suivant : délai large
+    r = await fetch(`${MEDIAMTX_HLS}/${livePath()}/${req.params[0]}${query}`, { signal: AbortSignal.timeout(15000) });
+  } catch {
+    return res.status(502).type('text').send('Direct indisponible');
+  }
+  res.status(r.status);
+  for (const h of ['content-type', 'cache-control']) if (r.headers.get(h)) res.set(h, r.headers.get(h));
+  if (!r.body) return res.end();
+  Readable.fromWeb(r.body).on('error', () => res.destroy()).pipe(res);
+});
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Route inconnue' }));
 
 /* ---------- Site compilé (production) ---------- */
 if (existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR, { index: false, maxAge: '1h' }));
-  app.get('*', (_req, res) => res.sendFile(path.join(DIST_DIR, 'index.html')));
+  app.get('*', async (req, res, next) => {
+    try {
+      const [html, settings, content] = await Promise.all([fs.readFile(path.join(DIST_DIR, 'index.html'), 'utf8'), readData('settings'), readData('content')]);
+      res.set('Cache-Control', 'no-cache').type('html').send(renderIndex(html, settings, content, req.path));
+    } catch (e) {
+      next(e);
+    }
+  });
 }
 
 app.use((err, _req, res, _next) => {
@@ -306,4 +563,14 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'Erreur serveur' });
 });
 
-app.listen(PORT, () => console.log(`Serveur Hope Chanel RDC : http://localhost:${PORT}`));
+// Première utilisation : clé du direct auto-hébergé créée automatiquement
+if (!privateData.streaming.destinations.selfhost.key) {
+  const streaming = structuredClone(privateData.streaming);
+  streaming.destinations.selfhost = { ...streaming.destinations.selfhost, enabled: true, key: crypto.randomBytes(10).toString('hex') };
+  await writePrivate({ streaming });
+}
+
+app.listen(PORT, () => {
+  console.log(`Serveur Hope Chanel RDC : http://localhost:${PORT}`);
+  startMediamtx({ root: ROOT, port: PORT });
+});

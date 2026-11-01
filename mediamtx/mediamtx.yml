@@ -1,0 +1,34 @@
+# MediaMTX : reçoit le direct de vMix (RTMP) et le convertit en HLS pour le site.
+# Pas besoin de le lancer à la main : le serveur du site (npm run dev / npm start) le démarre avec ce fichier.
+# Le serveur du site contrôle la clé de diffusion et relaie la vidéo sur /hls/ : rien d'autre à exposer.
+
+logLevel: info
+
+# Seul le port RTMP doit être ouvert sur Internet (vMix → VPS).
+rtmp: yes
+rtmpAddress: :1935
+rtsp: no
+webrtc: no
+srt: no
+
+# HLS et API : accessibles seulement depuis le serveur du site (même machine).
+hls: yes
+hlsAddress: 127.0.0.1:8888
+hlsVariant: fmp4
+hlsAlwaysRemux: yes
+hlsSegmentCount: 7
+api: yes
+apiAddress: 127.0.0.1:9997
+
+# La clé de diffusion est vérifiée par le serveur du site (Admin → Diffusion).
+# L'adresse est ajustée automatiquement au PORT du site au démarrage.
+authMethod: http
+authHTTPAddress: http://127.0.0.1:3001/api/mediamtx/auth
+authHTTPExclude:
+  - action: api
+  - action: metrics
+  - action: pprof
+
+# vMix envoie vers rtmp://…:1935/live avec la clé comme nom de flux → chemin live/<clé>
+paths:
+  "~^live/[a-zA-Z0-9_-]+$":

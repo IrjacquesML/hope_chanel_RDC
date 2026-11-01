@@ -1,13 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import Logo from '../components/Logo';
 import { Close, MenuIcon } from '../components/Icons';
 import CollectionEditor from './CollectionEditor';
 import ScheduleEditor from './ScheduleEditor';
 import Stats from './Stats';
-import { Field, getPath, setPath, slugify } from './fields';
+import SettingsEditor from './Settings';
+import Account from './Account';
+import Users from './Users';
+import { ForcePasswordChange, Login } from './Auth';
+import { Avatar } from './accountUi';
+import { ROLE_LABELS, canSee } from './permissions';
+import { slugify } from './fields';
 import { api } from './api';
-import { formatDate, liveSource, parseYouTube } from '../lib';
+import { formatDate, liveSource } from '../lib';
+import { applyColors, settings as siteSettings } from '../siteSettings';
 
 /* ---------------------------------------------------------------- */
 /* Définition des sections                                          */
@@ -39,19 +46,18 @@ function buildSections(data) {
           { name: 'slug', label: 'Identifiant (URL)', immutable: true, hint: 'Généré depuis le titre si vide. Ex. : reveil-d-espoir', pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/, patternMessage: 'Minuscules, chiffres et tirets uniquement' },
           { name: 'category', label: 'Catégorie', type: 'select', options: catOptions, required: true },
           { name: 'host', label: 'Présentateur·rice' },
-          { name: 'featured', label: 'À la une (carrousel)', type: 'checkbox' },
           { name: 'highlight', label: 'Temps fort de la semaine', type: 'checkbox' },
           { name: 'image', label: 'Image (16:9)', type: 'image', required: true },
           { name: 'tagline', label: 'Accroche', type: 'i18n', required: true },
           { name: 'description', label: 'Description', type: 'i18nText', required: true },
         ],
-        makeNew: () => ({ slug: '', title: '', category: catOptions[0]?.value, featured: false, highlight: false, image: '', host: '', tagline: { fr: '', en: '' }, description: { fr: '', en: '' } }),
+        makeNew: () => ({ slug: '', title: '', category: catOptions[0]?.value, highlight: false, image: '', host: '', tagline: { fr: '', en: '' }, description: { fr: '', en: '' } }),
         beforeSave: (item, isNew) => (isNew && !item.slug ? { ...item, slug: slugify(item.title) } : item),
         summary: (s) => ({
           title: s.title,
           subtitle: `${catOptions.find((c) => c.value === s.category)?.label || s.category} · ${showsFile.episodes.filter((e) => e.show === s.slug).length} épisode(s)`,
           image: s.image,
-          badges: [s.featured && 'À la une', s.highlight && 'Temps fort'].filter(Boolean),
+          badges: [s.highlight && 'Temps fort'].filter(Boolean),
         }),
         canDelete: (s) => {
           const n = showsFile.episodes.filter((e) => e.show === s.slug).length;
@@ -190,8 +196,10 @@ function buildSections(data) {
       },
     },
     stats: { label: 'Statistiques', custom: 'stats' },
-    settings: { label: 'Direct & coordonnées', custom: 'settings' },
+    settings: { label: 'Paramètres', custom: 'settings' },
     backups: { label: 'Sauvegardes', custom: 'backups' },
+    users: { label: 'Comptes', custom: 'users' },
+    account: { label: 'Mon compte', custom: 'account' },
   };
 }
 
@@ -199,127 +207,8 @@ const NAV_GROUPS = [
   ['Tableau de bord', ['dashboard', 'stats']],
   ['Contenus TV', ['shows', 'episodes', 'categories', 'schedule']],
   ['Site', ['events', 'news', 'team', 'testimonials', 'network']],
-  ['Configuration', ['settings', 'backups']],
+  ['Configuration', ['settings', 'users', 'backups']],
 ];
-
-/* ---------------------------------------------------------------- */
-
-const SETTINGS_FIELDS = [
-  ['Direct', [
-    { name: 'live.youtubeUrl', label: 'Lien du live YouTube', type: 'url', wide: true, placeholder: 'https://www.youtube.com/live/…  ou  https://youtu.be/…', hint: 'Collez le lien de la vidéo en direct (bouton « Partager » sur YouTube). Prioritaire sur les options ci-dessous.' },
-    { name: 'live.hlsUrl', label: 'URL du flux HLS (.m3u8)', type: 'url', hint: 'Option avancée : flux d’un service de streaming payant.' },
-    { name: 'live.youtubeChannelId', label: 'Identifiant de chaîne YouTube', hint: 'Option de secours : « UC… ». Affiche automatiquement le direct en cours de la chaîne.' },
-    { name: 'live.poster', label: 'Image d’attente du lecteur', type: 'image' },
-  ]],
-  ['Coordonnées', [
-    { name: 'contact.address', label: 'Adresse', wide: true },
-    { name: 'contact.email', label: 'E-mail', type: 'email' },
-    { name: 'contact.whatsapp', label: 'Numéro WhatsApp' },
-    { name: 'contact.phones', label: 'Téléphones', type: 'list' },
-    { name: 'contact.map.lat', label: 'Carte : latitude', type: 'number' },
-    { name: 'contact.map.lon', label: 'Carte : longitude', type: 'number' },
-  ]],
-  ['Réseaux sociaux', [
-    { name: 'social.youtube', label: 'YouTube', type: 'url' },
-    { name: 'social.facebook', label: 'Facebook', type: 'url' },
-    { name: 'social.instagram', label: 'Instagram', type: 'url' },
-    { name: 'social.x', label: 'X', type: 'url' },
-    { name: 'social.whatsapp', label: 'Lien WhatsApp', type: 'url', hint: 'Ex. : https://wa.me/243…' },
-  ]],
-];
-
-const LIVE_STEPS = [
-  ['La régie', 'produit le programme, celui qui part déjà vers l’émetteur TV.'],
-  ['Un encodeur', 'transforme ce signal en flux Internet. Ça peut être un logiciel gratuit comme OBS Studio sur un PC branché à la régie, ou un boîtier d’encodage dédié.'],
-  ['La plateforme', 'reçoit le flux et le redistribue à tous les spectateurs. C’est elle qui supporte la charge quand des milliers de personnes regardent en même temps.'],
-  ['Le site', 'affiche simplement le lecteur de cette plateforme.'],
-];
-
-function LiveHelp() {
-  return (
-    <div className="mb-5 rounded-lg bg-brand/5 p-4 ring-1 ring-brand/10">
-      <p className="mb-3 text-sm font-semibold text-brand">Comment le direct arrive sur le site</p>
-      <ol className="grid gap-3 sm:grid-cols-4">
-        {LIVE_STEPS.map(([title, text], i) => (
-          <li key={title} className="text-sm text-gray-700">
-            <span className="mb-1 flex items-center gap-2 font-semibold text-ink">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-xs text-white">{i + 1}</span>
-              {title}
-            </span>
-            {text}
-          </li>
-        ))}
-      </ol>
-      <p className="mt-3 text-xs text-gray-600">La fréquence TV (TNT, satellite) ne peut pas être lue par un navigateur : seul un flux Internet peut s’afficher sur le site.</p>
-    </div>
-  );
-}
-
-/** Indique ce qui a été reconnu dans le lien YouTube et propose un aperçu. */
-function LiveStatus({ live }) {
-  const [preview, setPreview] = useState(false);
-  const yt = parseYouTube(live.youtubeUrl);
-  const source = liveSource(live);
-  let message;
-  let tone = 'text-green-800 bg-green-50 ring-green-200';
-  if (live.youtubeUrl && !yt) {
-    message = 'Lien non reconnu. Utilisez le lien de la vidéo en direct (youtube.com/live/…, youtu.be/… ou watch?v=…).';
-    tone = 'text-red-800 bg-red-50 ring-red-200';
-  } else if (yt?.handle) {
-    message = `Le lien de chaîne « ${yt.handle} » ne peut pas être intégré. Ouvrez le direct sur YouTube, cliquez sur « Partager » et collez ce lien-là.`;
-    tone = 'text-red-800 bg-red-50 ring-red-200';
-  } else if (yt?.videoId) message = `✓ Vidéo YouTube détectée (${yt.videoId}). Pensez à mettre ce lien à jour si vous lancez un nouveau direct.`;
-  else if (yt?.channelId) message = '✓ Chaîne YouTube détectée : le direct en cours de la chaîne s’affichera automatiquement.';
-  else if (source) message = `✓ Source utilisée : ${source.type === 'hls' ? 'flux HLS' : 'identifiant de chaîne YouTube'}.`;
-  else {
-    message = 'Aucun direct configuré : la page « Regarder » affichera un message d’attente.';
-    tone = 'text-amber-900 bg-amber-50 ring-amber-200';
-  }
-  return (
-    <div className="mt-4 space-y-3 sm:col-span-2">
-      <p role="status" className={`rounded-lg p-3 text-sm ring-1 ${tone}`}>{message}</p>
-      {source?.type === 'youtube' && (
-        <>
-          <button type="button" onClick={() => setPreview((v) => !v)} className="text-sm font-semibold text-brand hover:underline">
-            {preview ? 'Masquer l’aperçu' : '▶ Aperçu du lecteur'}
-          </button>
-          {preview && (
-            <div className="aspect-video max-w-xl overflow-hidden rounded-lg bg-ink">
-              <iframe title="Aperçu du direct" src={source.src.replace('autoplay=1', 'autoplay=0')} allow="encrypted-media; picture-in-picture; fullscreen" allowFullScreen className="h-full w-full" />
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-function SettingsEditor({ content, onSave }) {
-  const [draft, setDraft] = useState(content);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(content);
-  return (
-    <div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-2xl font-bold">Direct & coordonnées</h1>
-        <button type="button" disabled={!dirty} onClick={() => onSave(draft)} className="btn-primary disabled:opacity-50">Enregistrer</button>
-      </div>
-      <div className="space-y-6">
-        {SETTINGS_FIELDS.map(([title, fields]) => (
-          <section key={title} className="rounded-xl bg-white p-6 ring-1 ring-black/5">
-            <h2 className="mb-4 font-semibold">{title}</h2>
-            {title === 'Direct' && <LiveHelp />}
-            <div className="grid gap-4 sm:grid-cols-2">
-              {fields.map((def) => (
-                <Field key={def.name} def={def} value={getPath(draft, def.name)} onChange={(v) => setDraft((d) => setPath(d, def.name, v))} />
-              ))}
-              {title === 'Direct' && <LiveStatus live={draft.live} />}
-            </div>
-          </section>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function Backups({ onRestored, notify }) {
   const [list, setList] = useState(null);
@@ -344,7 +233,7 @@ function Backups({ onRestored, notify }) {
   const describe = (name) => {
     const [, file, stamp] = /^(\w+)-(.+)\.json$/.exec(name);
     const iso = stamp.replace(/^(\d{4}-\d{2}-\d{2}T\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/, '$1:$2:$3.$4Z');
-    return { file: { shows: 'Émissions, épisodes, catégories', schedule: 'Programme', content: 'Contenus du site' }[file], date: new Date(iso).toLocaleString('fr-FR') };
+    return { file: { shows: 'Émissions, épisodes, catégories', schedule: 'Programme', content: 'Contenus, coordonnées et direct', settings: 'Paramètres du site' }[file], date: new Date(iso).toLocaleString('fr-FR') };
   };
 
   return (
@@ -378,22 +267,33 @@ function Backups({ onRestored, notify }) {
   );
 }
 
-function Dashboard({ data, go }) {
+function Dashboard({ data, go, user }) {
   const { shows, content } = data;
+  const canSettings = canSee(user, 'settings');
   const stats = [
     ['Émissions', shows.shows.length, 'shows'],
     ['Épisodes', shows.episodes.length, 'episodes'],
     ['Événements à venir', content.events.filter((e) => e.date >= today()).length, 'events'],
     ['Actualités', content.news.length, 'news'],
-  ];
+  ].filter(([, , key]) => canSee(user, key));
   const latest = [...shows.episodes].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
   const liveOk = Boolean(liveSource(content.live));
   return (
     <div>
-      <h1 className="text-2xl font-bold">Tableau de bord</h1>
-      <p className="mt-1 text-sm text-gray-600">Bienvenue dans l’administration de Hope Chanel RDC.</p>
-      {!liveOk && (
-        <button type="button" onClick={() => go('settings')} className="mt-6 block w-full rounded-xl bg-amber-50 p-4 text-left text-sm text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100">
+      <h1 className="text-2xl font-bold">Bonjour, {user.name}</h1>
+      <p className="mt-1 text-sm text-gray-600">Bienvenue dans l’administration de Hope Chanel RDC · {ROLE_LABELS[user.role]}</p>
+      {user.recoveryCodesLeft === 0 && (
+        <button type="button" onClick={() => go('account')} className="mt-6 block w-full rounded-xl bg-white p-4 text-left text-sm text-ink ring-1 ring-black/10 hover:ring-brand">
+          🔑 Vous n’avez pas encore de codes de secours : sans eux, un mot de passe oublié ne peut pas être récupéré par vous-même. <strong className="text-brand">Créer mes codes →</strong>
+        </button>
+      )}
+      {user.role === 'admin' && data.settings.maintenance?.enabled && (
+        <button type="button" onClick={() => go('settings', 'annonce')} className="mt-6 block w-full rounded-xl bg-red-50 p-4 text-left text-sm text-red-900 ring-1 ring-red-200 hover:bg-red-100">
+          ⚠ Le mode maintenance est actif : les visiteurs ne voient pas le site. <strong>Désactiver →</strong>
+        </button>
+      )}
+      {canSettings && !liveOk && (
+        <button type="button" onClick={() => go('settings', 'direct')} className="mt-6 block w-full rounded-xl bg-amber-50 p-4 text-left text-sm text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100">
           ⚠ Le flux du direct n’est pas configuré : la page « Regarder » ne peut pas diffuser. <strong>Configurer →</strong>
         </button>
       )}
@@ -405,6 +305,7 @@ function Dashboard({ data, go }) {
           </button>
         ))}
       </div>
+      {canSee(user, 'episodes') && (
       <section className="mt-8 rounded-xl bg-white p-5 ring-1 ring-black/5">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-semibold">Derniers épisodes</h2>
@@ -419,50 +320,16 @@ function Dashboard({ data, go }) {
           ))}
         </ul>
       </section>
+      )}
     </div>
   );
 }
 
 /* ---------------------------------------------------------------- */
 
-function Login({ onLogged }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const submit = async (e) => {
-    e.preventDefault();
-    setBusy(true);
-    setError('');
-    try {
-      await api.login(email, password);
-      onLogged();
-    } catch (ex) {
-      setError(ex.status === undefined || ex.status >= 500 ? 'Serveur injoignable. Lancez « npm run dev ».' : ex.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-mist p-4">
-      <form onSubmit={submit} className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-xl ring-1 ring-black/5">
-        <Logo />
-        <h1 className="mt-6 text-xl font-bold">Administration</h1>
-        <label htmlFor="email" className="mb-1 mt-6 block text-sm font-medium">E-mail</label>
-        <input id="email" type="email" autoComplete="username" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} className="input" />
-        <label htmlFor="pwd" className="mb-1 mt-4 block text-sm font-medium">Mot de passe</label>
-        <input id="pwd" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="input" aria-invalid={!!error} aria-describedby={error ? 'pwd-err' : undefined} />
-        {error && <p id="pwd-err" role="alert" className="error-text">{error}</p>}
-        <button type="submit" disabled={busy || !email || !password} className="btn-primary mt-6 w-full py-3 disabled:opacity-60">{busy ? 'Connexion…' : 'Se connecter'}</button>
-        <Link to="/" className="mt-4 block text-center text-sm text-gray-600 hover:text-brand">← Retour au site</Link>
-      </form>
-    </main>
-  );
-}
-
 export default function Admin() {
   const { pathname } = useLocation();
-  const [auth, setAuth] = useState(null); // null = vérification en cours
+  const [user, setUser] = useState(null); // null = vérification en cours, false = non connecté
   const [data, setData] = useState(null);
   const [section, setSection] = useState(() => pathname.split('/')[2] || 'dashboard');
   const [toast, setToast] = useState(null);
@@ -474,7 +341,7 @@ export default function Admin() {
     meta.content = 'noindex, nofollow';
     document.head.appendChild(meta);
     document.title = 'Administration | Hope Chanel RDC';
-    api.me().then((r) => setAuth(r.authenticated)).catch(() => setAuth(false));
+    api.me().then((r) => setUser(r.authenticated ? r.user : false)).catch(() => setUser(false));
     return () => meta.remove();
   }, []);
 
@@ -490,20 +357,23 @@ export default function Admin() {
     };
   }, [navOpen]);
 
+  const onAuthLost = useCallback(() => setUser(false), []);
+  const logout = () => api.logout().finally(() => setUser(false));
   const notify = useCallback((message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   }, []);
 
   const load = useCallback(() => api.load().then(setData).catch((e) => notify(e.message, 'error')), [notify]);
+  const ready = Boolean(user && !user.mustChangePassword);
   useEffect(() => {
-    if (auth) load();
-  }, [auth, load]);
+    if (ready) load();
+  }, [ready, load]);
 
-  const go = (key) => {
+  const go = (key, hash) => {
     setSection(key);
     setNavOpen(false);
-    window.history.replaceState(null, '', key === 'dashboard' ? '/admin' : `/admin/${key}`);
+    window.history.replaceState(null, '', (key === 'dashboard' ? '/admin' : `/admin/${key}`) + (hash ? `#${hash}` : ''));
     window.scrollTo(0, 0);
   };
 
@@ -512,26 +382,35 @@ export default function Admin() {
     try {
       await api.save(file, next);
       setData((d) => ({ ...d, [file]: next }));
+      if (file === 'settings') {
+        // Logo et couleurs de l'administration mis à jour sans recharger la page
+        Object.assign(siteSettings, next);
+        applyColors(next.appearance);
+      }
       notify('Modifications enregistrées.');
       return true;
     } catch (e) {
-      if (e.status === 401) setAuth(false);
+      if (e.status === 401) setUser(false);
       notify(e.message, 'error');
       return false;
     }
   };
 
-  if (auth === null) return <div className="flex min-h-screen items-center justify-center text-gray-500">Chargement…</div>;
-  if (!auth) return <Login onLogged={() => setAuth(true)} />;
+  if (user === null) return <div className="flex min-h-screen items-center justify-center text-gray-500">Chargement…</div>;
+  if (!user) return <Login onLogged={setUser} />;
+  if (user.mustChangePassword) return <ForcePasswordChange user={user} onDone={setUser} onLogout={logout} />;
   if (!data) return <div className="flex min-h-screen items-center justify-center text-gray-500">Chargement des données…</div>;
 
   const sections = buildSections(data);
-  const current = sections[section];
+  // Une section non autorisée pour ce rôle (ex. : adresse saisie à la main) ramène au tableau de bord.
+  const current = canSee(user, section) ? sections[section] : null;
 
   let body;
-  if (section === 'dashboard' || !current) body = <Dashboard data={data} go={go} />;
+  if (section === 'dashboard' || !current) body = <Dashboard data={data} go={go} user={user} />;
   else if (current.custom === 'schedule') body = <ScheduleEditor key={JSON.stringify(data.schedule).length} schedule={data.schedule} shows={data.shows.shows} onSave={(s) => saveFile('schedule', s)} />;
-  else if (current.custom === 'settings') body = <SettingsEditor content={data.content} onSave={(c) => saveFile('content', c)} />;
+  else if (current.custom === 'settings') body = <SettingsEditor data={data} user={user} onSave={saveFile} notify={notify} onAuthLost={onAuthLost} />;
+  else if (current.custom === 'account') body = <Account user={user} onUserChange={setUser} notify={notify} onAuthLost={onAuthLost} />;
+  else if (current.custom === 'users') body = <Users me={user} notify={notify} onAuthLost={onAuthLost} />;
   else if (current.custom === 'stats') body = <Stats data={data} />;
   else if (current.custom === 'backups') body = <Backups onRestored={load} notify={notify} />;
   else {
@@ -547,6 +426,8 @@ export default function Admin() {
   }
 
   const label = (k) => (k === 'dashboard' ? 'Accueil' : sections[k].label);
+  const navGroups = NAV_GROUPS.map(([group, keys]) => [group, keys.filter((k) => k === 'dashboard' || canSee(user, k))]).filter(([, keys]) => keys.length);
+  const shown = current ? section : 'dashboard';
 
   return (
     <div data-admin className="min-h-screen bg-mist lg:flex">
@@ -559,10 +440,10 @@ export default function Admin() {
             className="flex h-11 min-w-0 items-center gap-2 rounded-full bg-white/10 pl-4 pr-3 text-sm font-semibold ring-1 ring-white/20 lg:hidden"
             aria-expanded={navOpen}
             aria-controls="admin-nav"
-            aria-label={navOpen ? 'Fermer le menu' : `Menu — section : ${label(section in sections ? section : 'dashboard')}`}
+            aria-label={navOpen ? 'Fermer le menu' : `Menu — section : ${label(shown)}`}
             onClick={() => setNavOpen((v) => !v)}
           >
-            <span className="truncate">{label(section in sections ? section : 'dashboard')}</span>
+            <span className="truncate">{label(shown)}</span>
             {navOpen ? <Close className="h-5 w-5 shrink-0" /> : <MenuIcon className="h-5 w-5 shrink-0" />}
           </button>
         </div>
@@ -572,7 +453,7 @@ export default function Admin() {
           aria-label="Administration"
           className={`${navOpen ? 'block' : 'hidden'} absolute inset-x-0 top-full max-h-[calc(100dvh-68px)] overflow-y-auto overscroll-contain bg-brand-dark px-3 pb-6 shadow-2xl lg:static lg:block lg:max-h-none lg:shadow-none`}
         >
-          {NAV_GROUPS.map(([group, keys]) => (
+          {navGroups.map(([group, keys]) => (
             <div key={group} className="mb-4">
               <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/50">{group}</p>
               {keys.map((k) => (
@@ -580,8 +461,8 @@ export default function Admin() {
                   key={k}
                   type="button"
                   onClick={() => go(k)}
-                  aria-current={section === k ? 'page' : undefined}
-                  className={`block w-full rounded-lg px-3 py-3 text-left text-[15px] transition lg:py-2 lg:text-sm ${section === k ? 'bg-white/15 font-semibold text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}
+                  aria-current={shown === k ? 'page' : undefined}
+                  className={`block w-full rounded-lg px-3 py-3 text-left text-[15px] transition lg:py-2 lg:text-sm ${shown === k ? 'bg-white/15 font-semibold text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}
                 >
                   {label(k)}
                 </button>
@@ -589,10 +470,22 @@ export default function Admin() {
             </div>
           ))}
           <div className="mt-6 space-y-1 border-t border-white/10 pt-4">
+            <button
+              type="button"
+              onClick={() => go('account')}
+              aria-current={shown === 'account' ? 'page' : undefined}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition ${shown === 'account' ? 'bg-white/15' : 'hover:bg-white/10'}`}
+            >
+              <Avatar user={user} size="h-9 w-9 text-xs" />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold">{user.name}</span>
+                <span className="block truncate text-xs text-white/60">{ROLE_LABELS[user.role]} · Mon compte</span>
+              </span>
+            </button>
             <a href="/" target="_blank" rel="noopener" className="block rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-white/10">↗ Voir le site</a>
             <button
               type="button"
-              onClick={() => api.logout().finally(() => setAuth(false))}
+              onClick={logout}
               className="block w-full rounded-lg px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10"
             >
               Se déconnecter

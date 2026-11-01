@@ -29,6 +29,27 @@ export const api = {
   backups: () => request('/api/backups'),
   stats: (days) => request(`/api/stats?days=${days}`, { cache: 'no-store' }),
   restore: (name) => request(`/api/backups/${encodeURIComponent(name)}/restore`, { method: 'POST' }),
+  privateSettings: () => request('/api/private', { cache: 'no-store' }),
+  saveStreaming: (streaming) => request('/api/private/streaming', { method: 'PUT', body: streaming }),
+  recover: (body) => request('/api/auth/recover', { method: 'POST', body }),
+  // Mon compte
+  account: () => request('/api/account', { cache: 'no-store' }),
+  saveProfile: (body) => request('/api/account/profile', { method: 'PUT', body }),
+  changePassword: (current, password) => request('/api/account/password', { method: 'POST', body: { current, password } }),
+  recoveryCodes: (current) => request('/api/account/recovery-codes', { method: 'POST', body: { current } }),
+  closeSession: (id) => request(`/api/account/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  closeOtherSessions: () => request('/api/account/sessions/close-others', { method: 'POST' }),
+  // Comptes (administrateurs)
+  users: () => request('/api/users', { cache: 'no-store' }),
+  createUser: (body) => request('/api/users', { method: 'POST', body }),
+  updateUser: (id, body) => request(`/api/users/${encodeURIComponent(id)}`, { method: 'PUT', body }),
+  resetUserPassword: (id) => request(`/api/users/${encodeURIComponent(id)}/reset-password`, { method: 'POST' }),
+  closeUserSessions: (id) => request(`/api/users/${encodeURIComponent(id)}/sessions`, { method: 'DELETE' }),
+  deleteUser: (id) => request(`/api/users/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  vmixStatus: () => request('/api/vmix/status', { cache: 'no-store' }),
+  vmixFunction: (name, input) => request('/api/vmix/function', { method: 'POST', body: { name, input } }),
+  selfhostStatus: () => request('/api/selfhost/status', { cache: 'no-store' }),
+  selfhostNewKey: () => request('/api/selfhost/key', { method: 'POST', body: {} }),
 };
 
 /** Redimensionne une image (1600 px max.) et la convertit en WebP avant envoi. */

@@ -1,26 +1,37 @@
 import { Link } from 'react-router-dom';
-import HeroCarousel from '../components/HeroCarousel';
 import ShowCard from '../components/ShowCard';
 import EpisodeCard from '../components/EpisodeCard';
 import SectionTitle from '../components/SectionTitle';
 import { DonateBanner, HowToWatch, Newsletter } from '../components/Sections';
+import LivePlayer from '../components/LivePlayer';
 import { ChevronRight } from '../components/Icons';
 import { shows, getSortedEpisodes } from '../lib';
 import { useLang } from '../i18n/LanguageContext';
 import { useSeo } from '../hooks/useSeo';
 
+/** Direct vMix en tête de l'accueil : bord à bord, à la hauteur de l'écran sous l'en-tête, sans texte autour ; il démarre seul. */
+function LiveNow() {
+  const { t } = useLang();
+  return (
+    // Hauteur : 16:9 sur toute la largeur, sans dépasser l'écran sous l'en-tête (h-16, puis h-20 en xl)
+    <section aria-labelledby="live-now" className="h-[min(56.25vw,calc(100svh-4rem))] bg-black xl:h-[min(56.25vw,calc(100svh-5rem))]">
+      <h2 id="live-now" className="sr-only">{t('common.live')}</h2>
+      <LivePlayer priority fill sizes="100vw" />
+    </section>
+  );
+}
+
 export default function Home() {
   const { t } = useLang();
-  useSeo({ description: "Hope Chanel RDC, la télévision chrétienne de l'espoir depuis Kinshasa : direct, émissions, études bibliques, familles et santé." });
+  useSeo({}); // titre et description : Paramètres → Identité & logo
 
   const pick = (flag) => (shows.some((s) => s[flag]) ? shows.filter((s) => s[flag]) : shows).slice(0, 4);
-  const featured = pick('featured');
   const highlights = pick('highlight');
   const latest = getSortedEpisodes().slice(0, 8);
 
   return (
     <>
-      {featured.length > 0 && <HeroCarousel slides={featured} />}
+      <LiveNow />
 
       <section aria-labelledby="highlights" className="py-16">
         <div className="container-page">

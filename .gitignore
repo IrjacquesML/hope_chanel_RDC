@@ -5,3 +5,11 @@ backups
 uploads
 *.tmp
 db
+mediamtx/mediamtx.exe
+mediamtx/mediamtx
+mediamtx/*.zip
+mediamtx/*.tar.gz
+
+# Certificat généré automatiquement par MediaMTX (clé privée)
+auto.crt
+auto.key

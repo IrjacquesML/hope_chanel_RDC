@@ -3,8 +3,11 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './pages/Home';
+import { AnnouncementBar, MaintenanceAdminNotice, MaintenancePage } from './components/SiteNotices';
 import { useLang } from './i18n/LanguageContext';
 import { trackPageview } from './analytics';
+import { viewer } from './lib';
+import { settings } from './siteSettings';
 
 // Découpage du code par page : seule l'accueil est chargée immédiatement.
 const Watch = lazy(() => import('./pages/Watch'));
@@ -68,12 +71,17 @@ export default function App() {
     );
   }
 
+  const maintenance = Boolean(settings.maintenance?.enabled);
+  if (maintenance && !viewer.admin) return <MaintenancePage />;
+
   return (
     <>
+      {maintenance && <MaintenanceAdminNotice />}
       <a href="#main" className="sr-only z-[60] rounded-full bg-accent px-4 py-2 font-semibold text-ink focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
         {t('common.skip')}
       </a>
       <ScrollManager />
+      <AnnouncementBar />
       <Header />
       <main id="main" tabIndex={-1} className="focus:outline-none">
         <Suspense fallback={<Loader />}>

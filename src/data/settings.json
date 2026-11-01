@@ -1,0 +1,51 @@
+{
+  "site": {
+    "name": "Hope Chanel RDC",
+    "tagline": {
+      "fr": "La télévision de l'espoir",
+      "en": "The television of hope"
+    },
+    "description": {
+      "fr": "Hope Chanel RDC, chaîne de télévision chrétienne basée à Kinshasa : direct, émissions, études bibliques, familles, santé et jeunesse.",
+      "en": "Hope Chanel RDC, a Christian television channel based in Kinshasa: live TV, shows, Bible studies, family, health and youth."
+    },
+    "about": {
+      "fr": "",
+      "en": ""
+    },
+    "url": "https://www.hopechanelrdc.org",
+    "logo": "/logo-hope-channel-rdc.webp",
+    "favicon": "/favicon.png",
+    "ogImage": "/og-image.png",
+    "copyright": "Hope Chanel RDC"
+  },
+  "appearance": {
+    "brand": "#0B3C7A",
+    "brandDark": "#082C5A",
+    "brandLight": "#1E5BA8",
+    "accent": "#F59E0B",
+    "accentDark": "#D97706"
+  },
+  "announcement": {
+    "enabled": false,
+    "text": {
+      "fr": "",
+      "en": ""
+    },
+    "link": "",
+    "tone": "info"
+  },
+  "maintenance": {
+    "enabled": false,
+    "message": {
+      "fr": "Le site est en cours de mise à jour. Merci de revenir dans quelques instants.",
+      "en": "The website is being updated. Please come back in a few moments."
+    }
+  },
+  "integrations": {
+    "googleAnalyticsId": "",
+    "googleSiteVerification": "",
+    "bingSiteVerification": "",
+    "facebookAppId": ""
+  }
+}

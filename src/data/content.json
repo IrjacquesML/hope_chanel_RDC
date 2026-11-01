@@ -1,170 +1,39 @@
 {
   "contact": {
-    "address": "Avenue de l'Espoir n° 00, Commune de la Gombe, Kinshasa, RD Congo",
+    "address": "01, avenue Lubumbashi, quartier Binza Pigeon, commune de Ngaliema, Kinshasa, RD Congo",
     "phones": [
-      "+243 000 000 000",
-      "+243 000 000 001"
+      "+243 976 5060"
     ],
     "whatsapp": "+243 000 000 002",
-    "email": "contact@hopechanelrdc.org",
+    "email": "hopechannelrdc@gmail.com",
     "map": {
-      "lat": -4.3076,
-      "lon": 15.3125
+      "lat": -4.4007,
+      "lon": 15.2627
+    },
+    "hours": {
+      "fr": "",
+      "en": ""
     }
   },
   "social": {
     "youtube": "https://www.youtube.com/",
     "facebook": "https://www.facebook.com/",
+    "tiktok": "",
     "instagram": "https://www.instagram.com/",
     "x": "https://x.com/",
-    "whatsapp": "https://wa.me/243000000002"
+    "whatsapp": "https://wa.me/243000000002",
+    "telegram": "",
+    "linkedin": ""
   },
   "live": {
-    "youtubeUrl": "https://youtu.be/KgqORHpYUGk?si=3-qx--H7GG7-ECxp",
-    "youtubeChannelId": "@HopechannelRDC",
+    "selfHosted": true,
+    "jetstreamEmbedUrl": "",
     "hlsUrl": "",
     "poster": "photo-1478737270239-2f02b77fc618"
   },
-  "events": [
-    {
-      "id": "concert-espoir-2026",
-      "date": "2026-11-14",
-      "time": "16:00",
-      "place": "Stade des Martyrs, Kinshasa",
-      "image": "photo-1501281668745-f7f57925c3b4",
-      "title": {
-        "fr": "Grand Concert de l'Espoir",
-        "en": "Great Concert of Hope"
-      },
-      "summary": {
-        "fr": "Une soirée de louange avec plus de 20 chorales de Kinshasa, retransmise en direct sur Hope Chanel RDC.",
-        "en": "An evening of praise with over 20 Kinshasa choirs, broadcast live on Hope Chanel RDC."
-      }
-    },
-    {
-      "id": "campagne-sante-2026",
-      "date": "2026-11-28",
-      "time": "08:00",
-      "place": "Lubumbashi — Place de la Poste",
-      "image": "photo-1576091160550-2173dba999ef",
-      "title": {
-        "fr": "Journée santé gratuite",
-        "en": "Free health day"
-      },
-      "summary": {
-        "fr": "Consultations, dépistages et conseils nutrition offerts par l'équipe de « Santé & Vie » et des médecins bénévoles.",
-        "en": "Consultations, screenings and nutrition advice offered by the « Santé & Vie » team and volunteer doctors."
-      }
-    },
-    {
-      "id": "seminaire-familles-2026",
-      "date": "2026-12-06",
-      "time": "09:30",
-      "place": "Goma — Salle polyvalente",
-      "image": "photo-1511895426328-dc8714191300",
-      "title": {
-        "fr": "Séminaire « Familles en Lumière »",
-        "en": "« Familles en Lumière » seminar"
-      },
-      "summary": {
-        "fr": "Une journée d'ateliers pour les couples et les parents : communication, éducation et projets de famille.",
-        "en": "A day of workshops for couples and parents: communication, parenting and family projects."
-      }
-    },
-    {
-      "id": "noel-espoir-2026",
-      "date": "2026-12-24",
-      "time": "19:00",
-      "place": "Studios Hope Chanel, Gombe",
-      "image": "photo-1512389142860-9c449e58a543",
-      "title": {
-        "fr": "Veillée de Noël en direct",
-        "en": "Live Christmas Eve celebration"
-      },
-      "summary": {
-        "fr": "Chants, lectures et messages d'espoir pour célébrer Noël en famille, en direct depuis nos studios.",
-        "en": "Songs, readings and messages of hope to celebrate Christmas with family, live from our studios."
-      }
-    }
-  ],
+  "events": [],
   "news": [],
-  "team": [
-    {
-      "name": "Emmanuel Mbuyi",
-      "role": {
-        "fr": "Directeur général",
-        "en": "Managing director"
-      },
-      "image": "photo-1507003211169-0a1dd7228f2d"
-    },
-    {
-      "name": "Ruth Kabongo",
-      "role": {
-        "fr": "Directrice des programmes",
-        "en": "Head of programming"
-      },
-      "image": "photo-1494790108377-be9c29b29330"
-    },
-    {
-      "name": "Patrick Lukusa",
-      "role": {
-        "fr": "Responsable santé",
-        "en": "Health lead"
-      },
-      "image": "photo-1500648767791-00dcc994a43e"
-    },
-    {
-      "name": "Sarah Mwamba",
-      "role": {
-        "fr": "Animatrice jeunesse",
-        "en": "Youth presenter"
-      },
-      "image": "photo-1438761681033-6461ffad8d80"
-    }
-  ],
+  "team": [],
   "testimonials": [],
-  "network": [
-    {
-      "city": "Kinshasa",
-      "channel": {
-        "fr": "TNT canal 00 · Satellite",
-        "en": "DTT channel 00 · Satellite"
-      }
-    },
-    {
-      "city": "Lubumbashi",
-      "channel": {
-        "fr": "TNT canal 00",
-        "en": "DTT channel 00"
-      }
-    },
-    {
-      "city": "Goma",
-      "channel": {
-        "fr": "TNT canal 00 · Radio 00.0 FM",
-        "en": "DTT channel 00 · Radio 00.0 FM"
-      }
-    },
-    {
-      "city": "Kisangani",
-      "channel": {
-        "fr": "TNT canal 00",
-        "en": "DTT channel 00"
-      }
-    },
-    {
-      "city": "Mbuji-Mayi",
-      "channel": {
-        "fr": "Radio 00.0 FM",
-        "en": "Radio 00.0 FM"
-      }
-    },
-    {
-      "city": "Bukavu",
-      "channel": {
-        "fr": "Radio 00.0 FM · Web",
-        "en": "Radio 00.0 FM · Web"
-      }
-    }
-  ]
+  "network": []
 }

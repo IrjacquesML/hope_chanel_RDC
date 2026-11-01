@@ -1,20 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
-import { Calendar, ChevronDown, ChevronRight, Facebook, Film, Globe, Heart, Info, Instagram, Tv, WhatsApp, XIcon, YouTube } from './Icons';
+import { Calendar, ChevronDown, ChevronRight, Film, Globe, Heart, Info, Tv } from './Icons';
+import { activeSocials } from './Socials';
 import { useLang } from '../i18n/LanguageContext';
 import { useKinshasaClock } from '../hooks/useKinshasaClock';
 import { getShow, isOnAir, scheduleForDay } from '../lib';
 import content from '../data/content.json';
+import { siteName } from '../siteSettings';
 
 const ICONS = { watch: Tv, shows: Film, donations: Heart, events: Calendar, about: Info, network: Globe };
-const SOCIALS = [
-  ['youtube', 'YouTube', YouTube],
-  ['facebook', 'Facebook', Facebook],
-  ['instagram', 'Instagram', Instagram],
-  ['x', 'X', XIcon],
-  ['whatsapp', 'WhatsApp', WhatsApp],
-];
 
 const samePath = (to, pathname) => to.split(/[?#]/)[0] === pathname;
 
@@ -190,13 +185,13 @@ export default function MobileMenu({ open, onClose, nav, burgerRef }) {
           </nav>
 
           <ul className="mt-6 flex justify-center gap-2 border-t border-gray-100 pt-6">
-            {SOCIALS.map(([key, label, Icon]) => (
+            {activeSocials(content.social).map(({ key, label, Icon }) => (
               <li key={key}>
                 <a
                   href={content.social[key]}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`Hope Channel RDC sur ${label}`}
+                  aria-label={`${siteName()} — ${label}`}
                   className="flex h-11 w-11 items-center justify-center rounded-full bg-mist text-brand transition hover:bg-brand hover:text-white"
                 >
                   <Icon />

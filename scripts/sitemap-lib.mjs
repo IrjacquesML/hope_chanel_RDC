@@ -20,11 +20,12 @@ const STATIC_ROUTES = [
   ['/conditions', '0.3', 'yearly'],
 ];
 
-export function buildSitemap(shows) {
+export function buildSitemap(shows, baseUrl = BASE_URL) {
+  const base = baseUrl.replace(/\/+$/, '');
   const routes = [...STATIC_ROUTES, ...shows.map((s) => [`/emissions/${s.slug}`, '0.7', 'weekly'])];
   const today = new Date().toISOString().slice(0, 10);
   const urls = routes
-    .map(([p, prio, freq]) => `  <url><loc>${BASE_URL}${p}</loc><lastmod>${today}</lastmod><changefreq>${freq}</changefreq><priority>${prio}</priority></url>`)
+    .map(([p, prio, freq]) => `  <url><loc>${base}${p}</loc><lastmod>${today}</lastmod><changefreq>${freq}</changefreq><priority>${prio}</priority></url>`)
     .join('\n');
   return { count: routes.length, xml: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n` };
 }

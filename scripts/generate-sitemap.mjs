@@ -2,7 +2,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { buildSitemap } from './sitemap-lib.mjs';
 
-const { shows } = JSON.parse(readFileSync(new URL('../src/data/shows.json', import.meta.url), 'utf8'));
-const { xml, count } = buildSitemap(shows);
+const read = (name) => JSON.parse(readFileSync(new URL(`../src/data/${name}.json`, import.meta.url), 'utf8'));
+const { shows } = read('shows');
+const { xml, count } = buildSitemap(shows, process.env.SITE_URL || read('settings').site.url);
 writeFileSync(new URL('../public/sitemap.xml', import.meta.url), xml);
 console.log(`sitemap.xml : ${count} URL`);

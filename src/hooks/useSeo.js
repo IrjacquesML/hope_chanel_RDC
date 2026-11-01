@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-
-const SITE = 'Hope Chanel RDC';
-const BASE_URL = 'https://www.hopechanelrdc.org';
+import { useLang } from '../i18n/LanguageContext';
+import { settings, siteName, siteUrl } from '../siteSettings';
 
 function setMeta(attr, name, content) {
   let el = document.head.querySelector(`meta[${attr}="${name}"]`);
@@ -17,10 +16,14 @@ function setMeta(attr, name, content) {
 /** Met à jour title, description, Open Graph et canonical pour chaque page. */
 export function useSeo({ title, description, image }) {
   const { pathname } = useLocation();
+  const { tr } = useLang();
   useEffect(() => {
-    const fullTitle = title ? `${title} | ${SITE}` : `${SITE} — La télévision de l'espoir`;
-    const url = BASE_URL + pathname;
+    const site = siteName();
+    const tagline = tr(settings.site?.tagline);
+    const fullTitle = title ? `${title} | ${site}` : tagline ? `${site} — ${tagline}` : site;
+    const url = siteUrl() + pathname;
     document.title = fullTitle;
+    description ||= tr(settings.site?.description);
     if (description) {
       setMeta('name', 'description', description);
       setMeta('property', 'og:description', description);
@@ -30,5 +33,5 @@ export function useSeo({ title, description, image }) {
     if (image) setMeta('property', 'og:image', image);
     const canonical = document.head.querySelector('link[rel="canonical"]');
     if (canonical) canonical.setAttribute('href', url);
-  }, [title, description, image, pathname]);
+  }, [title, description, image, pathname, tr]);
 }

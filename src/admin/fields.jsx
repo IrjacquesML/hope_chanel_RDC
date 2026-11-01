@@ -80,9 +80,41 @@ function ListInput({ id, value = [], onChange }) {
   );
 }
 
+function ColorInput({ id, value, onChange }) {
+  const valid = /^#[\da-f]{6}$/i.test(value || '');
+  return (
+    <div className="flex items-center gap-2">
+      <input type="color" value={valid ? value : '#000000'} onChange={(e) => onChange(e.target.value.toUpperCase())} className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-gray-300 bg-white p-1" aria-label="Choisir la couleur" />
+      <input id={id} value={value || ''} onChange={(e) => onChange(e.target.value.trim())} className={`${inputCls} font-mono uppercase`} placeholder="#0B3C7A" maxLength={7} aria-invalid={!valid} />
+    </div>
+  );
+}
+
+/** Champ confidentiel (clé de diffusion, mot de passe) : masqué par défaut, avec bouton « Copier ». */
+function SecretInput({ id, value, onChange, placeholder }) {
+  const [shown, setShown] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value || '');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* presse-papiers indisponible */
+    }
+  };
+  return (
+    <div className="flex gap-2">
+      <input id={id} type={shown ? 'text' : 'password'} autoComplete="off" spellCheck={false} value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={`${inputCls} font-mono`} />
+      <button type="button" onClick={() => setShown((v) => !v)} className="shrink-0 rounded-lg px-3 text-xs font-semibold text-brand hover:bg-brand/10">{shown ? 'Masquer' : 'Afficher'}</button>
+      {value && <button type="button" onClick={copy} className="shrink-0 rounded-lg px-3 text-xs font-semibold text-brand hover:bg-brand/10">{copied ? 'Copié ✓' : 'Copier'}</button>}
+    </div>
+  );
+}
+
 /**
  * Champ générique piloté par une définition :
- * { name, label, type: text|textarea|number|date|time|url|email|checkbox|select|i18n|i18nText|image|list, options, required, hint, wide, immutable }
+ * { name, label, type: text|textarea|number|date|time|url|email|checkbox|select|i18n|i18nText|image|list|color|secret, options, required, hint, wide, immutable }
  */
 export function Field({ def, value, onChange, error, locked }) {
   const id = useId();
@@ -144,6 +176,12 @@ export function Field({ def, value, onChange, error, locked }) {
       break;
     case 'list':
       control = <ListInput id={id} value={value} onChange={onChange} />;
+      break;
+    case 'color':
+      control = <ColorInput id={id} value={value} onChange={onChange} />;
+      break;
+    case 'secret':
+      control = <SecretInput id={id} value={value} onChange={onChange} placeholder={def.placeholder} />;
       break;
     default:
       control = <input {...common} type={def.type || 'text'} value={value ?? ''} onChange={(e) => onChange(e.target.value)} placeholder={def.placeholder} />;

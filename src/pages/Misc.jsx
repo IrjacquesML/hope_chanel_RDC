@@ -3,6 +3,11 @@ import PageHeader from '../components/PageHeader';
 import { HowToWatch, Newsletter } from '../components/Sections';
 import { useLang } from '../i18n/LanguageContext';
 import { useSeo } from '../hooks/useSeo';
+import content from '../data/content.json';
+
+const DEFAULT_EMAIL = 'hopechannelrdc@gmail.com';
+/** Les textes modèles citent l'e-mail par défaut : on affiche celui défini dans l'administration. */
+const withEmail = (text) => text.replace(DEFAULT_EMAIL, content.contact.email || DEFAULT_EMAIL);
 
 export function HowToWatchPage() {
   const { t } = useLang();
@@ -24,13 +29,13 @@ const LEGAL = {
       ['Données collectées', "Nous collectons uniquement les données que vous nous transmettez volontairement (formulaire de contact, newsletter, dons) : nom, adresse e-mail, numéro de téléphone."],
       ['Utilisation', "Ces données servent exclusivement à répondre à vos demandes, à vous envoyer notre lettre d'information et à traiter vos dons. Elles ne sont jamais vendues."],
       ['Paiements', "Les paiements Mobile Money et carte sont traités par des prestataires certifiés. Hope Chanel RDC ne conserve aucune donnée de carte bancaire."],
-      ['Vos droits', 'Vous pouvez demander l’accès, la rectification ou la suppression de vos données en écrivant à contact@hopechanelrdc.org.'],
+      ['Vos droits', 'Vous pouvez demander l’accès, la rectification ou la suppression de vos données en écrivant à hopechannelrdc@gmail.com.'],
     ],
     en: [
       ['Data collected', 'We only collect data you voluntarily provide (contact form, newsletter, donations): name, email address, phone number.'],
       ['Use', 'This data is used solely to answer your requests, send our newsletter and process your gifts. It is never sold.'],
       ['Payments', 'Mobile Money and card payments are processed by certified providers. Hope Chanel RDC stores no card data.'],
-      ['Your rights', 'You may request access, correction or deletion of your data by writing to contact@hopechanelrdc.org.'],
+      ['Your rights', 'You may request access, correction or deletion of your data by writing to hopechannelrdc@gmail.com.'],
     ],
   },
   terms: {
@@ -86,7 +91,7 @@ export function LegalPage({ kind }) {
             {page[lang].map(([h, p]) => (
               <div key={h}>
                 <h2 className="text-xl font-bold">{h}</h2>
-                <p className="mt-2 leading-relaxed text-gray-700">{p}</p>
+                <p className="mt-2 leading-relaxed text-gray-700">{withEmail(p)}</p>
               </div>
             ))}
           </div>

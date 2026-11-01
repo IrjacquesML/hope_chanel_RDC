@@ -6,7 +6,7 @@ const API = 'http://localhost:3001';
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: { '/api': API, '/uploads': API, '/sitemap.xml': API },
+    proxy: { '/api': API, '/uploads': API, '/hls': API, '/sitemap.xml': API },
     // Les JSON sont réécrits par l'admin : on évite le rechargement automatique de la page en cours d'édition.
     watch: { ignored: ['**/db/**', '**/src/data/**', '**/backups/**', '**/uploads/**'] },
   },

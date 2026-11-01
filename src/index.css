@@ -3,6 +3,14 @@
 @tailwind utilities;
 
 @layer base {
+  /* Couleurs par défaut (remplacées au chargement par celles des paramètres du site) */
+  :root {
+    --brand: 11 60 122;
+    --brand-dark: 8 44 90;
+    --brand-light: 30 91 168;
+    --accent: 245 158 11;
+    --accent-dark: 217 119 6;
+  }
   html { scroll-behavior: smooth; }
 
   /*

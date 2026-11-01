@@ -3,10 +3,12 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { LanguageProvider } from './i18n/LanguageContext';
 import { hydrateData } from './lib';
+import { applySiteSettings } from './siteSettings';
 import App from './App';
 import './index.css';
 
 hydrateData().finally(() => {
+  applySiteSettings();
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
       {/* Comportements de React Router v7 activés dès maintenant (supprime les avertissements de la console) */}

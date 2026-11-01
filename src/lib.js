@@ -1,8 +1,12 @@
 import showsData from './data/shows.json';
 import scheduleData from './data/schedule.json';
 import contentData from './data/content.json';
+import settingsData from './data/settings.json';
 
 export const { shows, episodes, categories } = showsData;
+
+/** Visiteur courant : admin = connecté à l'administration (voit le site même en maintenance). */
+export const viewer = { admin: false };
 
 /**
  * Remplace les données intégrées au build par celles du serveur (modifiées via /admin).
@@ -16,7 +20,8 @@ export async function hydrateData() {
     clearTimeout(timer);
     if (!res.ok) return;
     const remote = await res.json();
-    const targets = { shows: showsData, schedule: scheduleData, content: contentData };
+    viewer.admin = Boolean(remote.viewer?.admin);
+    const targets = { shows: showsData, schedule: scheduleData, content: contentData, settings: settingsData };
     for (const [file, target] of Object.entries(targets)) {
       if (!remote[file]) continue;
       for (const [key, value] of Object.entries(remote[file])) {
@@ -30,39 +35,32 @@ export async function hydrateData() {
 }
 
 /**
- * Analyse un lien YouTube collé par l'administrateur.
- * Reconnaît : watch?v=ID, youtu.be/ID, /live/ID, /embed/ID, /shorts/ID, /channel/UC…
- * Renvoie { videoId } | { channelId } | { handle } (non intégrable) | null.
+ * Analyse l'URL d'intégration Jet-Stream collée par l'administrateur.
+ * Accepte l'URL seule ou le code <iframe src="…"> complet. Renvoie l'URL https ou null.
  */
-export function parseYouTube(input) {
+export function parseEmbedUrl(input) {
   const raw = (input || '').trim();
   if (!raw) return null;
-  if (/^[\w-]{11}$/.test(raw)) return { videoId: raw };
-  let url;
+  const src = raw.match(/src\s*=\s*["']([^"']+)["']/i)?.[1] || raw;
   try {
-    url = new URL(/^https?:\/\//.test(raw) ? raw : `https://${raw}`);
+    const url = new URL(src.startsWith('//') ? `https:${src}` : src);
+    return url.protocol === 'https:' ? url.href : null;
   } catch {
     return null;
   }
-  const host = url.hostname.replace(/^(www\.|m\.)/, '');
-  const parts = url.pathname.split('/').filter(Boolean);
-  if (host === 'youtu.be' && /^[\w-]{11}$/.test(parts[0] || '')) return { videoId: parts[0] };
-  if (!['youtube.com', 'youtube-nocookie.com'].includes(host)) return null;
-  const v = url.searchParams.get('v');
-  if (v && /^[\w-]{11}$/.test(v)) return { videoId: v };
-  if (['live', 'embed', 'shorts'].includes(parts[0]) && /^[\w-]{11}$/.test(parts[1] || '')) return { videoId: parts[1] };
-  if (parts[0] === 'channel' && /^UC[\w-]{22}$/.test(parts[1] || '')) return { channelId: parts[1] };
-  if (parts[0]?.startsWith('@')) return { handle: parts[0] };
-  return null;
 }
 
-/** URL d'intégration du direct selon la configuration (lien YouTube > flux HLS > identifiant de chaîne). */
+/** Flux HLS du serveur du site (MediaMTX relayé par server/index.js). */
+export const SELF_HOSTED_HLS = '/hls/live/index.m3u8';
+
+/**
+ * Source du direct vMix, sans YouTube : serveur du site (MediaMTX), sinon lecteur Jet-Stream intégré, sinon flux HLS (.m3u8).
+ */
 export function liveSource(live) {
-  const yt = parseYouTube(live.youtubeUrl);
-  if (yt?.videoId) return { type: 'youtube', src: `https://www.youtube-nocookie.com/embed/${yt.videoId}?autoplay=1` };
-  if (yt?.channelId) return { type: 'youtube', src: `https://www.youtube-nocookie.com/embed/live_stream?channel=${yt.channelId}&autoplay=1` };
+  if (live.selfHosted) return { type: 'hls', src: SELF_HOSTED_HLS };
+  const embed = parseEmbedUrl(live.jetstreamEmbedUrl);
+  if (embed) return { type: 'embed', src: embed };
   if (live.hlsUrl) return { type: 'hls', src: live.hlsUrl };
-  if (live.youtubeChannelId) return { type: 'youtube', src: `https://www.youtube-nocookie.com/embed/live_stream?channel=${live.youtubeChannelId}&autoplay=1` };
   return null;
 }
 

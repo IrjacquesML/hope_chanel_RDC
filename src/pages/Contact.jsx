@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import PageHeader from '../components/PageHeader';
-import { Check, Mail, MapPin, Phone, WhatsApp } from '../components/Icons';
+import { Check, Clock, Mail, MapPin, Phone, WhatsApp } from '../components/Icons';
 import { useLang } from '../i18n/LanguageContext';
 import { useSeo } from '../hooks/useSeo';
 import content from '../data/content.json';
 
 export default function Contact() {
-  const { t } = useLang();
+  const { t, tr } = useLang();
   useSeo({ title: t('nav.contact'), description: t('contact.intro') });
   const { contact } = content;
   const [f, setF] = useState({ name: '', email: '', subject: 0, message: '' });
@@ -71,10 +71,11 @@ export default function Contact() {
 
         <aside className="space-y-6 lg:col-span-2">
           <ul className="space-y-4 rounded-3xl bg-mist p-6">
-            <li className="flex gap-3"><MapPin className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><span><strong className="block">{t('contact.address')}</strong>{contact.address}</span></li>
-            <li className="flex gap-3"><Phone className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><span><strong className="block">{t('contact.phone')}</strong>{contact.phones.map((p) => <a key={p} href={`tel:${p.replace(/\s/g, '')}`} className="flex min-h-[40px] items-center hover:text-brand">{p}</a>)}</span></li>
-            <li className="flex gap-3"><WhatsApp className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><span><strong className="block">WhatsApp</strong><a href={content.social.whatsapp} className="hover:text-brand">{contact.whatsapp}</a></span></li>
-            <li className="flex gap-3"><Mail className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><span><strong className="block">E-mail</strong><a href={`mailto:${contact.email}`} className="hover:text-brand">{contact.email}</a></span></li>
+            {contact.address && <li className="flex gap-3"><MapPin className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><span><strong className="block">{t('contact.address')}</strong>{contact.address}</span></li>}
+            {contact.phones.length > 0 && <li className="flex gap-3"><Phone className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><span><strong className="block">{t('contact.phone')}</strong>{contact.phones.map((p) => <a key={p} href={`tel:${p.replace(/\s/g, '')}`} className="flex min-h-[40px] items-center hover:text-brand">{p}</a>)}</span></li>}
+            {contact.whatsapp && <li className="flex gap-3"><WhatsApp className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><span><strong className="block">WhatsApp</strong><a href={`https://wa.me/${contact.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:text-brand">{contact.whatsapp}</a></span></li>}
+            {contact.email && <li className="flex gap-3"><Mail className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><span><strong className="block">E-mail</strong><a href={`mailto:${contact.email}`} className="break-all hover:text-brand">{contact.email}</a></span></li>}
+            {tr(contact.hours) && <li className="flex gap-3"><Clock className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><span><strong className="block">{t('contact.hours')}</strong>{tr(contact.hours)}</span></li>}
           </ul>
           <div className="overflow-hidden rounded-3xl shadow-sm ring-1 ring-black/5">
             <iframe

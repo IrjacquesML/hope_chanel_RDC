@@ -42,8 +42,8 @@ export function DonateBanner() {
       <div className="container-page">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand to-brand-dark px-6 py-12 text-white sm:px-12 sm:py-16">
           <svg aria-hidden="true" viewBox="0 0 200 100" className="absolute -bottom-6 -right-6 w-72 opacity-20 sm:w-96">
-            <path d="M40 100a60 60 0 0 1 120 0z" fill="#F59E0B" />
-            <g stroke="#F59E0B" strokeWidth="6" strokeLinecap="round">
+            <path d="M40 100a60 60 0 0 1 120 0z" className="fill-accent" />
+            <g className="stroke-accent" strokeWidth="6" strokeLinecap="round">
               <path d="M100 10v18M45 32l12 12M155 32l-12 12M15 75h18M167 75h18" />
             </g>
           </svg>
