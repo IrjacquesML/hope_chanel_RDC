@@ -103,9 +103,10 @@ export function Login({ onLogged }) {
       {info && <p role="status" className="mt-4 rounded-lg bg-green-50 p-3 text-sm text-green-800 ring-1 ring-green-200">{info}</p>}
       <label htmlFor="email" className="label mt-6">E-mail</label>
       <input id="email" type="email" autoComplete="username" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} className="input" />
-      <label htmlFor="pwd" className="label mt-4">Mot de passe</label>
-      <input id="pwd" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="input" aria-invalid={!!error} aria-describedby={error ? 'pwd-err' : undefined} />
-      {error && <p id="pwd-err" role="alert" className="error-text">{error}</p>}
+      <div className="mt-4">
+        <PasswordInput id="pwd" label="Mot de passe" value={password} onChange={setPassword} />
+      </div>
+      {error && <p role="alert" className="error-text">{error}</p>}
       <button type="submit" disabled={busy || !email || !password} className="btn-primary mt-6 w-full py-3 disabled:opacity-60">{busy ? 'Connexion…' : 'Se connecter'}</button>
       <button type="button" onClick={() => setMode('recover')} className="mt-4 block w-full text-center text-sm font-semibold text-brand hover:underline">Mot de passe oublié ?</button>
       <Link to="/" className="mt-3 block text-center text-sm text-gray-600 hover:text-brand">← Retour au site</Link>

@@ -1,9 +1,7 @@
 // Comptes de l'administration : utilisateurs, rôles, sessions, mots de passe, codes de secours et journal des connexions.
 import express from 'express';
 import crypto from 'node:crypto';
-import fs from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
+import { openStore } from './db.js';
 
 export const ROLES = {
   admin: 'Administrateur',
@@ -81,35 +79,17 @@ export function describeDevice(ua = '') {
 
 /* ---------------------------------------------------------------- */
 
-export function createAuth({ dbDir, prod, envEmail, envPassword, legacyAdmin }) {
-  const USERS_FILE = path.join(dbDir, 'users.json');
-  const LOG_FILE = path.join(dbDir, 'auth-log.json');
+export async function createAuth({ dbDir, prod, envEmail, envPassword, legacyAdmin }) {
+  /* ---------- Stockage (MySQL ou fichiers JSON, voir db.js) : comptes gardés en mémoire, chaque changement est enregistré ---------- */
+  const store = await openStore(dbDir);
+  let users = await store.loadUsers();
+  const log = await store.loadLog(LOG_MAX);
+  console.log(`Comptes : ${store.kind}`);
 
-  /* ---------- Stockage ---------- */
-  let users = [];
-  let log = [];
-  try {
-    users = JSON.parse(readFileSync(USERS_FILE, 'utf8')).users;
-  } catch {
-    users = [];
-  }
-  try {
-    log = JSON.parse(readFileSync(LOG_FILE, 'utf8'));
-  } catch {
-    log = [];
-  }
-
-  // Écritures en file d'attente : jamais deux écritures simultanées du même fichier.
+  // Écritures en file d'attente : jamais deux enregistrements simultanés.
   let queue = Promise.resolve();
-  const writeJson = (file, data) => {
-    queue = queue.then(async () => {
-      const tmp = file + '.tmp';
-      await fs.writeFile(tmp, JSON.stringify(data, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 });
-      await fs.rename(tmp, file);
-    });
-    return queue;
-  };
-  const saveUsers = () => writeJson(USERS_FILE, { users });
+  const enqueue = (fn) => (queue = queue.catch(() => {}).then(fn));
+  const saveUsers = () => enqueue(() => store.saveUsers(users));
 
   const now = () => new Date().toISOString();
 
@@ -140,7 +120,7 @@ export function createAuth({ dbDir, prod, envEmail, envPassword, legacyAdmin }) 
       process.exit(1);
     }
     users.push(makeUser({ name: 'Administrateur', email, role: 'admin', passwordHash }));
-    saveUsers();
+    await saveUsers();
     console.log(`Compte administrateur créé : ${email}`);
   }
 
@@ -153,7 +133,7 @@ export function createAuth({ dbDir, prod, envEmail, envPassword, legacyAdmin }) 
     let u = users.find((x) => x.email === envEmail);
     if (!u) users.push((u = makeUser({ name: 'Administrateur', email: envEmail, role: 'admin', passwordHash: '' })));
     Object.assign(u, { role: 'admin', active: true, passwordHash: hashSecret(envPassword), mustChangePassword: true, updatedAt: now(), passwordChangedAt: now() });
-    saveUsers();
+    await saveUsers();
     console.warn(`ADMIN_RESET : le compte ${envEmail} a retrouvé le mot de passe du fichier .env (à changer à la connexion). Retirez ADMIN_RESET=1 du fichier .env.`);
   }
 
@@ -179,7 +159,7 @@ export function createAuth({ dbDir, prod, envEmail, envPassword, legacyAdmin }) 
 
   /* ---------- Journal ---------- */
   function record(req, event, user, extra = {}) {
-    log.unshift({
+    const entry = {
       at: now(),
       event,
       userId: user?.id || null,
@@ -188,9 +168,10 @@ export function createAuth({ dbDir, prod, envEmail, envPassword, legacyAdmin }) 
       ip: req.ip,
       device: describeDevice(req.get('user-agent')),
       ...extra,
-    });
+    };
+    log.unshift(entry);
     if (log.length > LOG_MAX) log.length = LOG_MAX;
-    writeJson(LOG_FILE, log).catch((e) => console.error('auth-log', e));
+    enqueue(() => store.addLog(entry, LOG_MAX)).catch((e) => console.error('auth-log', e));
   }
 
   /* ---------- Sessions (en mémoire : un redémarrage du serveur déconnecte tout le monde) ---------- */

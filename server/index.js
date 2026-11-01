@@ -93,7 +93,7 @@ async function writePrivate(next) {
 }
 
 const stats = createStats(ROOT);
-const auth = createAuth({ dbDir: DB_DIR, prod: PROD, envEmail: ENV_EMAIL, envPassword: ENV_PASSWORD, legacyAdmin });
+const auth = await createAuth({ dbDir: DB_DIR, prod: PROD, envEmail: ENV_EMAIL, envPassword: ENV_PASSWORD, legacyAdmin });
 const { requireAuth, requireRole, isAuthed, canWriteFile } = auth;
 
 const app = express();

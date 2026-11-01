@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -62,6 +62,9 @@ export default function App() {
     const id = setTimeout(trackPageview, 300);
     return () => clearTimeout(id);
   }, [pathname]);
+
+  // Page de connexion : accessible uniquement en tapant /login (aucun lien sur le site)
+  if (pathname === '/login') return <Navigate to="/admin" replace />;
 
   if (pathname.startsWith('/admin')) {
     return (

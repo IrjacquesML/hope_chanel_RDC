@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import Logo from './Logo';
-import { Clock, Lock, Mail, MapPin, Phone } from './Icons';
+import { Clock, Mail, MapPin, Phone } from './Icons';
 import { activeSocials } from './Socials';
 import { useLang } from '../i18n/LanguageContext';
 import content from '../data/content.json';
@@ -97,14 +97,6 @@ export default function Footer() {
       <div className="border-t border-white/10">
         <div className="container-page flex flex-col items-center justify-between gap-3 py-5 text-sm text-white/70 sm:flex-row">
           <p>© {new Date().getFullYear()} {settings.site?.copyright || siteName()}. {t('footer.rights')}</p>
-          <Link
-            to="/admin"
-            rel="nofollow"
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 ring-1 ring-white/20 transition hover:bg-white/10 hover:text-white sm:min-h-[36px] sm:px-3"
-          >
-            <Lock className="h-4 w-4" />
-            {t('footer.admin')}
-          </Link>
         </div>
       </div>
     </footer>

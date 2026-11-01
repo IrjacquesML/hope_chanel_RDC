@@ -31,6 +31,23 @@ Ouvrez **http://localhost:5173/admin** et connectez-vous. Au premier démarrage,
 - Règles : 10 caractères minimum, lettres et chiffres, ni l'adresse e-mail ni un mot de passe courant. Stockage chiffré (scrypt). Changer ou réinitialiser un mot de passe ferme les autres sessions.
 - **Dernier recours** (plus aucun administrateur ne peut se connecter) : sur le serveur, ajoutez `ADMIN_RESET=1` dans `.env` et redémarrez : le compte `ADMIN_EMAIL` redevient administrateur actif avec le mot de passe `ADMIN_PASSWORD` (à changer à la connexion). Retirez ensuite `ADMIN_RESET=1`.
 
+#### Base MySQL des comptes
+
+Les comptes et le journal des connexions sont enregistrés dans une base **MySQL / MariaDB** dès que `MYSQL_DATABASE` est défini dans `.env` (sinon : fichiers `db/users.json` et `db/auth-log.json`).
+
+- Tables `users` et `auth_log`, créées automatiquement au démarrage (`server/db.js`). Le journal garde un an d'historique.
+- Au premier démarrage avec MySQL, les comptes et le journal des fichiers `db/*.json` sont **repris dans la base** : le login administrateur reste le même. Ensuite, seule la base fait foi (les fichiers JSON ne sont plus mis à jour).
+- Créer la base et son utilisateur (une fois, en `root` : phpMyAdmin → SQL, ou `mysql -u root -p`) :
+
+  ```sql
+  CREATE DATABASE hopechanel_rdc CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  CREATE USER 'hopechanel'@'localhost' IDENTIFIED BY 'un-mot-de-passe-solide';
+  GRANT ALL PRIVILEGES ON hopechanel_rdc.* TO 'hopechanel'@'localhost';
+  ```
+
+  puis renseigner `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD` dans `.env` (voir `.env.example`).
+- Sauvegarde : `mysqldump -u hopechanel -p hopechanel_rdc > comptes.sql`.
+
 | Section | Ce qu'on y gère |
 |---|---|
 | Émissions | Titre, catégorie, image, accroche/description FR-EN, « À la une » (carrousel), « Temps fort », ordre |
