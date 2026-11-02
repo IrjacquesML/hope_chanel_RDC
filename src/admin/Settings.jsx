@@ -71,7 +71,7 @@ const TABS = [
     file: 'content',
     groups: [
       ['Lecteur du direct vMix (accueil et page « Regarder »)', [
-        { name: 'live.selfHosted', label: 'Lire le direct depuis le serveur du site (MediaMTX)', type: 'checkbox', wide: true, hint: 'Conseillé : vMix envoie au serveur du site (Diffusion → « Serveur du site »), sans plateforme payante. Prioritaire sur les options ci-dessous.' },
+        { name: 'live.selfHosted', label: 'Lire le direct depuis le serveur du site (MediaMTX)', type: 'checkbox', wide: true, hint: 'Conseillé : vMix envoie au serveur du site (onglet Diffusion → « Diffuser vMix sur le site »), sans plateforme payante. Prioritaire sur les options ci-dessous.' },
         { name: 'live.hlsUrl', label: 'URL du flux HLS (.m3u8)', type: 'url', wide: true, hint: 'Flux HLS d’une plateforme (Jet-Stream…), si vous n’utilisez pas le serveur du site.' },
         { name: 'live.jetstreamEmbedUrl', label: 'URL d’intégration Jet-Stream', wide: true, placeholder: 'https://…  ou  <iframe src="…"></iframe>', hint: 'Autre possibilité : le lecteur Jet-Stream (URL ou code <iframe>). Prioritaire sur l’URL HLS.' },
         { name: 'live.poster', label: 'Image d’attente du lecteur', type: 'image' },
@@ -138,9 +138,9 @@ const TABS = [
 
 const LIVE_STEPS = [
   ['La régie', 'produit le programme, celui qui part déjà vers l’émetteur TV.'],
-  ['Un encodeur', 'transforme ce signal en flux Internet : vMix (recommandé) ou, à défaut, OBS Studio sur un PC branché à la régie, ou un boîtier d’encodage. Voir l’onglet « Diffusion ».'],
-  ['La plateforme', 'reçoit le flux (Jet-Stream, YouTube…) et le redistribue à tous les spectateurs, même quand des milliers de personnes regardent.'],
-  ['Le site', 'affiche simplement le lecteur de cette plateforme.'],
+  ['vMix', 'transforme ce signal en flux Internet et l’envoie au serveur du site (voir l’onglet « Diffusion »). À défaut : OBS Studio.'],
+  ['Le serveur du site', 'reçoit le flux (relais MediaMTX) et le prépare pour les navigateurs. Pour des milliers de spectateurs, une plateforme comme Jet-Stream peut prendre le relais.'],
+  ['Le site', 'affiche le direct tout seul en tête de l’accueil et sur la page « Regarder ».'],
 ];
 
 function LiveHelp() {

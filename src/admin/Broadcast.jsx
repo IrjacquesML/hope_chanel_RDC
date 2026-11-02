@@ -378,8 +378,8 @@ function SiteLive({ notify }) {
           )}
           {s.relay === 'missing' && (
             <p>
-              Le programme MediaMTX est introuvable. Placez <strong>mediamtx.exe</strong> dans le dossier <code>C:\mediamtx</code> (ou dans le dossier <code>mediamtx</code> du projet), puis
-              redémarrez le site (<code>npm run dev</code>).
+              Le programme MediaMTX est introuvable. Sur un PC Windows : placez <strong>mediamtx.exe</strong> dans le dossier <code>C:\mediamtx</code> (ou dans le dossier <code>mediamtx</code> du
+              projet), puis redémarrez le site (<code>npm run dev</code>). Sur le VPS : lancez <code>bash scripts/deploy-vps.sh</code>, qui l’installe.
             </p>
           )}
         </Step>
