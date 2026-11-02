@@ -50,6 +50,12 @@ export const api = {
   vmixFunction: (name, input) => request('/api/vmix/function', { method: 'POST', body: { name, input } }),
   selfhostStatus: () => request('/api/selfhost/status', { cache: 'no-store' }),
   selfhostNewKey: () => request('/api/selfhost/key', { method: 'POST', body: {} }),
+  // Synchronisation des réseaux sociaux
+  social: () => request('/api/social', { cache: 'no-store' }),
+  saveSocialConfig: (config) => request('/api/social/config', { method: 'PUT', body: config }),
+  socialSync: () => request('/api/social/sync', { method: 'POST' }),
+  socialStatus: (key, status) => request(`/api/social/items/${encodeURIComponent(key)}`, { method: 'PATCH', body: { status } }),
+  socialToArticle: (key) => request(`/api/social/items/${encodeURIComponent(key)}/article`, { method: 'POST' }),
 };
 
 /** Redimensionne une image (1600 px max.) et la convertit en WebP avant envoi. */

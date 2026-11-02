@@ -7,6 +7,8 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildSitemap } from '../scripts/sitemap-lib.mjs';
+import { DEFAULT_RUBRIQUES, articleSlug, isPublished, kinshasaToday, plainText, publicArticles } from '../src/articles.js';
+import { createSocial } from './social.js';
 import { createStats } from './stats.js';
 import { createAuth } from './auth.js';
 import { MEDIAMTX_HLS, pathReady, relayState, startMediamtx } from './mediamtx.js';
@@ -153,6 +155,7 @@ function validate(name, d) {
   if (name === 'schedule') {
     if (!isObj(d.templates) || !Array.isArray(d.week) || d.week.length !== 7) return 'Structure du programme invalide';
     if (d.week.some((k) => !Array.isArray(d.templates[k]))) return 'Un jour de la semaine utilise un modèle inexistant';
+    if (d.labels !== undefined && (!isObj(d.labels) || Object.values(d.labels).some((v) => typeof v !== 'string' || v.length > 60))) return 'Noms de modèles invalides';
     for (const [k, slots] of Object.entries(d.templates)) {
       for (const s of slots) {
         if (!TIME.test(s.start) || !(TIME.test(s.end) || s.end === '23:59')) return `Horaire invalide dans « ${k} »`;
@@ -167,6 +170,8 @@ function validate(name, d) {
     if (!Array.isArray(d.contact.phones)) return 'Les téléphones doivent être une liste';
     for (const [k, v] of Object.entries(d.social)) if (v && !/^https:\/\//.test(v)) return `Le lien « ${k} » doit commencer par https://`;
     if (d.partners !== undefined && !Array.isArray(d.partners)) return 'La section « partners » doit être une liste';
+    const articleError = validateArticles(d);
+    if (articleError) return articleError;
     for (const p of d.partners || []) {
       if (!isObj(p) || !String(p.name || '').trim()) return 'Chaque partenaire doit avoir un nom';
       if (!/^https?:\/\/[^\s/]+\.[^\s]+$/.test(String(p.url || '').trim())) return `Lien invalide pour le partenaire « ${p.name} » (ex. : https://www.exemple.org)`;
@@ -185,6 +190,35 @@ function validate(name, d) {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/** Articles et rubriques : identifiants uniques, adresse (slug) valide, statut connu, rubrique existante. */
+function validateArticles(d) {
+  if (d.newsCategories !== undefined) {
+    if (!Array.isArray(d.newsCategories)) return 'Les rubriques doivent être une liste';
+    const ids = new Set();
+    for (const c of d.newsCategories) {
+      if (!isObj(c) || !SLUG_RE.test(c.id || '') || ids.has(c.id)) return `Identifiant de rubrique manquant ou en double : « ${c?.id ?? ''} »`;
+      if (!String(c.label?.fr || '').trim()) return 'Chaque rubrique doit avoir un nom';
+      ids.add(c.id);
+    }
+  }
+  const rubriques = new Set((d.newsCategories?.length ? d.newsCategories : null)?.map((c) => c.id) ?? []);
+  const ids = new Set();
+  const slugs = new Set();
+  for (const a of d.news) {
+    if (!isObj(a) || !a.id || ids.has(a.id)) return `Identifiant d'article manquant ou en double : « ${a?.id ?? ''} »`;
+    if (!String(a.title?.fr || '').trim()) return 'Chaque article doit avoir un titre (FR)';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(a.date || '')) return `Date invalide pour l'article « ${a.title.fr} »`;
+    if (a.slug !== undefined && !SLUG_RE.test(a.slug)) return `Adresse invalide pour l'article « ${a.title.fr} » (minuscules, chiffres et tirets)`;
+    if (slugs.has(articleSlug(a))) return `Deux articles ont la même adresse : « ${articleSlug(a)} »`;
+    if (a.status !== undefined && !['published', 'draft'].includes(a.status)) return `Statut inconnu pour l'article « ${a.title.fr} »`;
+    if (a.category && rubriques.size && !rubriques.has(a.category)) return `Rubrique inconnue pour l'article « ${a.title.fr} »`;
+    ids.add(a.id);
+    slugs.add(articleSlug(a));
+  }
+  return null;
+}
 const HOST_RE = /^[a-zA-Z0-9.-]{1,253}$/;
 const STREAM_URL_RE = /^(rtmps?|srt):\/\/\S+$/;
 
@@ -215,8 +249,18 @@ function renderIndex(html, settings, content, pathname) {
   const { site, appearance, integrations } = settings;
   const base = site.url.replace(/\/+$/, '');
   const abs = (u) => (/^https?:/.test(u) ? u : base + u);
-  const title = site.tagline?.fr ? `${site.name} — ${site.tagline.fr}` : site.name;
-  const description = site.description?.fr || '';
+  let title = site.tagline?.fr ? `${site.name} — ${site.tagline.fr}` : site.name;
+  let description = site.description?.fr || '';
+  let image = abs(site.ogImage);
+  let ogType = 'website';
+  const slug = /^\/actualites\/([\w-]+)\/?$/.exec(pathname)?.[1];
+  const article = slug && content.news.find((a) => articleSlug(a) === slug && isPublished(a));
+  if (article) {
+    title = `${article.title.fr} | ${site.name}`;
+    description = (article.summary?.fr || plainText(article.body?.fr)).slice(0, 200);
+    if (article.image) image = abs(article.image.startsWith('photo-') ? `https://images.unsplash.com/${article.image}?auto=format&fit=crop&w=1200&h=630&q=75` : article.image);
+    ogType = 'article';
+  }
   const { contact } = content;
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -248,7 +292,8 @@ function renderIndex(html, settings, content, pathname) {
     .replace(/(<meta property="og:title" content=")[^"]*/, `$1${escapeHtml(title)}`)
     .replace(/(<meta property="og:description" content=")[^"]*/, `$1${escapeHtml(description)}`)
     .replace(/(<meta property="og:url" content=")[^"]*/, `$1${escapeHtml(base + pathname)}`)
-    .replace(/(<meta property="og:image" content=")[^"]*/, `$1${escapeHtml(abs(site.ogImage))}`)
+    .replace(/(<meta property="og:image" content=")[^"]*/, `$1${escapeHtml(image)}`)
+    .replace(/(<meta property="og:type" content=")[^"]*/, `$1${ogType}`)
     .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`)
     .replace('</head>', `${extra.join('\n    ')}\n  </head>`);
 }
@@ -271,7 +316,10 @@ app.get('/api/data', async (req, res, next) => {
   try {
     const [shows, schedule, content, settings] = await Promise.all(FILES.map(readData));
     // viewer.admin : un membre de l'équipe connecté voit le site même en mode maintenance.
-    res.set('Cache-Control', 'no-cache').json({ shows, schedule, content, settings, viewer: { admin: isAuthed(req) } });
+    // Les brouillons et articles programmés ne sont envoyés qu'à l'équipe connectée.
+    const admin = isAuthed(req);
+    const visible = admin ? content : { ...content, news: publicArticles(content.news) };
+    res.set('Cache-Control', 'no-cache').json({ shows, schedule, content: visible, settings, viewer: { admin } });
   } catch (e) {
     next(e);
   }
@@ -279,6 +327,50 @@ app.get('/api/data', async (req, res, next) => {
 
 /* ---------- Comptes, connexion, mot de passe : voir server/auth.js ---------- */
 app.use('/api', auth.router);
+
+/* ---------- Synchronisation des réseaux sociaux : voir server/social.js ---------- */
+const slugify = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80).replace(/-$/, '');
+const NETWORK_NAMES = { youtube: 'YouTube', facebook: 'Facebook', instagram: 'Instagram' };
+
+/** Crée un article en brouillon à partir d'une vidéo ou d'une publication importée. Renvoie son adresse. */
+async function articleFromSocial(item) {
+  const content = await readData('content');
+  const rubriques = content.newsCategories?.length ? content.newsCategories : DEFAULT_RUBRIQUES;
+  const title = item.title || plainText(item.text).slice(0, 80) || `Publication ${NETWORK_NAMES[item.network]}`;
+  const base = slugify(title) || 'article';
+  let slug = base;
+  for (let n = 2; content.news.some((a) => articleSlug(a) === slug); n++) slug = `${base}-${n}`;
+  const link = item.network === 'youtube' ? item.url : `[Voir la publication sur ${NETWORK_NAMES[item.network]}](${item.url})`;
+  const article = {
+    id: `news-${Date.now().toString(36)}`,
+    slug,
+    status: 'draft',
+    featured: false,
+    category: rubriques[0].id,
+    author: '',
+    date: kinshasaToday(),
+    image: item.image || '',
+    imageCaption: '',
+    title: { fr: title, en: '' },
+    summary: { fr: plainText(item.text).slice(0, 240) || title, en: '' },
+    body: { fr: `${item.text.trim()}\n\n${link}`.trim(), en: '' },
+  };
+  const next = { ...content, news: [article, ...content.news] };
+  const error = validate('content', next);
+  if (error) throw new Error(error);
+  await writeData('content', next);
+  return slug;
+}
+
+const social = createSocial({
+  dbDir: DB_DIR,
+  uploadDir: UPLOAD_DIR,
+  requireRole,
+  getContentSocial: async () => (await readData('content')).social,
+  onArticle: articleFromSocial,
+});
+app.use('/api', social.router);
+social.schedule();
 
 /* ---------- Réglages confidentiels (administrateur et technicien régie) ---------- */
 const streamingRoles = requireRole('admin', 'technician');
@@ -525,8 +617,8 @@ app.get('/api/stats/export.csv', requireAuth, (req, res) => {
 
 app.get('/sitemap.xml', async (_req, res, next) => {
   try {
-    const [{ shows }, settings] = await Promise.all([readData('shows'), readData('settings')]);
-    res.type('application/xml').send(buildSitemap(shows, process.env.SITE_URL || settings.site.url).xml);
+    const [{ shows }, settings, content] = await Promise.all([readData('shows'), readData('settings'), readData('content')]);
+    res.type('application/xml').send(buildSitemap(shows, process.env.SITE_URL || settings.site.url, content.news).xml);
   } catch (e) {
     next(e);
   }

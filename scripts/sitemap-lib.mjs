@@ -1,3 +1,5 @@
+import { articleSlug, publicArticles } from '../src/articles.js';
+
 export const BASE_URL = process.env.SITE_URL || 'https://hckinshasa-rdc.org';
 
 const STATIC_ROUTES = [
@@ -13,6 +15,7 @@ const STATIC_ROUTES = [
   ['/apropos', '0.6', 'monthly'],
   ['/contact', '0.6', 'yearly'],
   ['/actualites', '0.7', 'weekly'],
+  ['/sur-nos-reseaux', '0.6', 'daily'],
   ['/reseau', '0.6', 'monthly'],
   ['/comment-nous-regarder', '0.6', 'monthly'],
   ['/faq', '0.4', 'yearly'],
@@ -20,9 +23,13 @@ const STATIC_ROUTES = [
   ['/conditions', '0.3', 'yearly'],
 ];
 
-export function buildSitemap(shows, baseUrl = BASE_URL) {
+export function buildSitemap(shows, baseUrl = BASE_URL, news = []) {
   const base = baseUrl.replace(/\/+$/, '');
-  const routes = [...STATIC_ROUTES, ...shows.map((s) => [`/emissions/${s.slug}`, '0.7', 'weekly'])];
+  const routes = [
+    ...STATIC_ROUTES,
+    ...shows.map((s) => [`/emissions/${s.slug}`, '0.7', 'weekly']),
+    ...publicArticles(news).map((a) => [`/actualites/${articleSlug(a)}`, '0.6', 'monthly']),
+  ];
   const today = new Date().toISOString().slice(0, 10);
   const urls = routes
     .map(([p, prio, freq]) => `  <url><loc>${base}${p}</loc><lastmod>${today}</lastmod><changefreq>${freq}</changefreq><priority>${prio}</priority></url>`)

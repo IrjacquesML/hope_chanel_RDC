@@ -21,6 +21,8 @@ const Events = lazy(() => import('./pages/Events'));
 const About = lazy(() => import('./pages/About'));
 const Contact = lazy(() => import('./pages/Contact'));
 const News = lazy(() => import('./pages/News'));
+const Article = lazy(() => import('./pages/Article'));
+const SocialPage = lazy(() => import('./pages/SocialPage'));
 const Network = lazy(() => import('./pages/Network'));
 const HowToWatchPage = lazy(() => import('./pages/Misc').then((m) => ({ default: m.HowToWatchPage })));
 const LegalPage = lazy(() => import('./pages/Misc').then((m) => ({ default: m.LegalPage })));
@@ -103,6 +105,8 @@ export default function App() {
             <Route path="/apropos" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/actualites" element={<News />} />
+            <Route path="/actualites/:slug" element={<Article />} />
+            <Route path="/sur-nos-reseaux" element={<SocialPage />} />
             <Route path="/reseau" element={<Network />} />
             <Route path="/faq" element={<LegalPage kind="faq" />} />
             <Route path="/confidentialite" element={<LegalPage kind="privacy" />} />

@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import ShowCard from '../components/ShowCard';
 import EpisodeCard from '../components/EpisodeCard';
+import ArticleCard from '../components/ArticleCard';
+import { SocialSection } from '../components/SocialFeed';
 import SectionTitle from '../components/SectionTitle';
 import { DonateBanner, HowToWatch, Newsletter } from '../components/Sections';
 import LivePlayer from '../components/LivePlayer';
@@ -8,6 +10,8 @@ import { ChevronRight } from '../components/Icons';
 import { shows, getSortedEpisodes } from '../lib';
 import { useLang } from '../i18n/LanguageContext';
 import { useSeo } from '../hooks/useSeo';
+import { publicArticles } from '../articles';
+import content from '../data/content.json';
 
 /** Direct vMix en tête de l'accueil : bord à bord, à la hauteur de l'écran sous l'en-tête, sans texte autour ; il démarre seul. */
 function LiveNow() {
@@ -28,6 +32,9 @@ export default function Home() {
   const pick = (flag) => (shows.some((s) => s[flag]) ? shows.filter((s) => s[flag]) : shows).slice(0, 4);
   const highlights = pick('highlight');
   const latest = getSortedEpisodes().slice(0, 8);
+  // Articles : ceux « À la une » d'abord, puis les plus récents
+  const published = publicArticles(content.news);
+  const news = [...published.filter((a) => a.featured), ...published.filter((a) => !a.featured)].slice(0, 3);
 
   return (
     <>
@@ -65,6 +72,28 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {news.length > 0 && (
+        <section aria-labelledby="home-news" className="py-16">
+          <div className="container-page">
+            <SectionTitle
+              id="home-news"
+              title={t('news.homeTitle')}
+              subtitle={t('news.homeSub')}
+              action={
+                <Link to="/actualites" className="inline-flex min-h-[44px] items-center gap-1 font-semibold text-brand hover:underline">
+                  {t('common.seeAll')} <ChevronRight className="h-4 w-4" />
+                </Link>
+              }
+            />
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {news.map((a) => <ArticleCard key={a.id} article={a} />)}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <SocialSection />
 
       <DonateBanner />
       <HowToWatch />

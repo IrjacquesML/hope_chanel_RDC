@@ -1,6 +1,7 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { api, imageToWebp } from './api';
 import { img } from '../lib';
+import RichText from '../components/RichText';
 
 /* Accès aux champs imbriqués : get(obj, 'contact.map.lat') */
 export const getPath = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
@@ -80,6 +81,114 @@ function ListInput({ id, value = [], onChange }) {
   );
 }
 
+/** Texte enrichi bilingue (corps d'un article) : barre d'outils, image téléversée, aperçu. */
+function RichTextInput({ id, value, onChange, label }) {
+  const [lang, setLang] = useState('fr');
+  const [preview, setPreview] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const ref = useRef(null);
+  const text = value?.[lang] || '';
+  const set = (v) => onChange({ fr: '', en: '', ...(value || {}), [lang]: v });
+
+  /** Entoure la sélection (ou insère un modèle) puis replace le curseur. */
+  const wrap = (before, after = '', placeholder = '') => {
+    const ta = ref.current;
+    const [s, e] = ta ? [ta.selectionStart, ta.selectionEnd] : [text.length, text.length];
+    const sel = text.slice(s, e) || placeholder;
+    set(text.slice(0, s) + before + sel + after + text.slice(e));
+    requestAnimationFrame(() => {
+      ta?.focus();
+      ta?.setSelectionRange(s + before.length, s + before.length + sel.length);
+    });
+  };
+  /** Ajoute un bloc sur sa propre ligne (intertitre, liste, image, vidéo…). */
+  const block = (prefix, placeholder) => {
+    const ta = ref.current;
+    const s = ta ? ta.selectionStart : text.length;
+    const startOfLine = text.lastIndexOf('\n', s - 1) + 1;
+    const end = text.indexOf('\n', s);
+    const lineText = text.slice(startOfLine, end === -1 ? text.length : end);
+    set(text.slice(0, startOfLine) + prefix + (lineText.trim() ? '' : placeholder) + text.slice(startOfLine));
+    requestAnimationFrame(() => ta?.focus());
+  };
+  const insertLine = (line) => {
+    const ta = ref.current;
+    const s = ta ? ta.selectionEnd : text.length;
+    const before = text.slice(0, s).replace(/\n*$/, '');
+    set(`${before}${before ? '\n\n' : ''}${line}\n\n${text.slice(s).replace(/^\n*/, '')}`);
+  };
+  const link = () => {
+    const url = window.prompt('Adresse du lien (https://…)', 'https://');
+    if (url && /^(https?:\/\/|\/|mailto:)/.test(url.trim())) wrap('[', `](${url.trim()})`, 'texte du lien');
+  };
+  const video = () => {
+    const url = window.prompt('Adresse de la vidéo YouTube (https://www.youtube.com/watch?v=…)');
+    if (url?.trim()) insertLine(url.trim());
+  };
+  const onFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBusy(true);
+    setErr('');
+    try {
+      const { url } = await api.upload(await imageToWebp(file));
+      const caption = window.prompt('Légende de l’image (facultatif)') || '';
+      insertLine(`![${caption.replace(/[[\]]/g, '')}](${url})`);
+    } catch (ex) {
+      setErr(ex.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const tool = 'rounded-md px-2.5 py-1.5 text-sm font-semibold text-gray-700 hover:bg-white hover:text-brand disabled:opacity-40';
+  return (
+    <div className="overflow-hidden rounded-lg border border-gray-300 focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/25">
+      <div className="flex flex-wrap items-center gap-0.5 border-b border-gray-200 bg-mist px-2 py-1.5">
+        {['fr', 'en'].map((l) => (
+          <button key={l} type="button" onClick={() => setLang(l)} aria-pressed={lang === l} className={`mr-1 rounded-md px-2 py-1 text-xs font-bold uppercase ${lang === l ? 'bg-brand text-white' : 'text-gray-600 hover:bg-white'}`}>
+            {l}
+          </button>
+        ))}
+        <span className="mx-1 h-5 w-px bg-gray-300" aria-hidden="true" />
+        <button type="button" disabled={preview} onClick={() => wrap('**', '**', 'texte en gras')} className={tool} title="Gras"><b>G</b></button>
+        <button type="button" disabled={preview} onClick={() => wrap('*', '*', 'texte en italique')} className={tool} title="Italique"><i>I</i></button>
+        <button type="button" disabled={preview} onClick={() => block('## ', 'Intertitre')} className={tool} title="Intertitre">Intertitre</button>
+        <button type="button" disabled={preview} onClick={link} className={tool} title="Lien">Lien</button>
+        <button type="button" disabled={preview} onClick={() => block('- ', 'élément de liste')} className={tool} title="Liste à puces">• Liste</button>
+        <button type="button" disabled={preview} onClick={() => block('> ', 'citation')} className={tool} title="Citation">« Citation »</button>
+        <label className={`${tool} cursor-pointer ${preview || busy ? 'pointer-events-none opacity-40' : ''}`} title="Image">
+          {busy ? 'Envoi…' : 'Image'}
+          <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={onFile} disabled={busy || preview} />
+        </label>
+        <button type="button" disabled={preview} onClick={video} className={tool} title="Vidéo YouTube">Vidéo</button>
+        <button type="button" onClick={() => setPreview((p) => !p)} aria-pressed={preview} className={`ml-auto rounded-md px-3 py-1.5 text-sm font-semibold ${preview ? 'bg-brand text-white' : 'text-brand hover:bg-white'}`}>
+          {preview ? 'Modifier' : 'Aperçu'}
+        </button>
+      </div>
+      {preview ? (
+        <div className="max-h-[32rem] min-h-[16rem] overflow-y-auto bg-white px-5 py-2">
+          {text.trim() ? <RichText text={text} /> : <p className="py-6 text-sm text-gray-500">Rien à afficher pour l’instant ({lang.toUpperCase()}).</p>}
+        </div>
+      ) : (
+        <textarea
+          id={id}
+          ref={ref}
+          rows={16}
+          value={text}
+          onChange={(e) => set(e.target.value)}
+          aria-label={`${label} (${lang.toUpperCase()})`}
+          placeholder={lang === 'fr' ? 'Écrivez l’article ici. Laissez une ligne vide entre deux paragraphes.' : 'English version (optional): if empty, the French text is shown.'}
+          className="block w-full resize-y border-0 px-4 py-3 text-[0.95rem] leading-relaxed text-ink focus:outline-none"
+        />
+      )}
+      {err && <p className="border-t border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700">{err}</p>}
+    </div>
+  );
+}
+
 /** Liste de liens { name, url } (ex. partenaires du pied de page). */
 function LinksInput({ id, value = [], onChange }) {
   const set = (i, key, v) => onChange(value.map((x, j) => (j === i ? { ...x, [key]: v } : x)));
@@ -131,7 +240,7 @@ function SecretInput({ id, value, onChange, placeholder }) {
 
 /**
  * Champ générique piloté par une définition :
- * { name, label, type: text|textarea|number|date|time|url|email|checkbox|select|i18n|i18nText|image|list|links|color|secret, options, required, hint, wide, immutable }
+ * { name, label, type: text|textarea|number|date|time|url|email|checkbox|select|i18n|i18nText|image|list|links|richtext|color|secret, options, required, hint, wide, immutable }
  */
 export function Field({ def, value, onChange, error, locked }) {
   const id = useId();
@@ -197,6 +306,9 @@ export function Field({ def, value, onChange, error, locked }) {
     case 'links':
       control = <LinksInput id={id} value={value} onChange={onChange} />;
       break;
+    case 'richtext':
+      control = <RichTextInput id={id} value={value} onChange={onChange} label={def.label} />;
+      break;
     case 'color':
       control = <ColorInput id={id} value={value} onChange={onChange} />;
       break;
@@ -208,7 +320,7 @@ export function Field({ def, value, onChange, error, locked }) {
   }
 
   return (
-    <Wrapper id={id} label={def.label} hint={disabled ? 'Non modifiable après création (utilisé dans les liens).' : def.hint} required={def.required} error={error} wide={def.wide || ['textarea', 'i18nText', 'image', 'list', 'links'].includes(def.type)}>
+    <Wrapper id={id} label={def.label} hint={disabled ? 'Non modifiable après création (utilisé dans les liens).' : def.hint} required={def.required} error={error} wide={def.wide || ['textarea', 'i18nText', 'image', 'list', 'links', 'richtext'].includes(def.type)}>
       {control}
     </Wrapper>
   );

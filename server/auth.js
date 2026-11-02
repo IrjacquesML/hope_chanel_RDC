@@ -14,7 +14,7 @@ export const ROLES = {
  * null = tout le fichier ; liste = uniquement ces sections.
  */
 const WRITABLE = {
-  editor: { shows: null, schedule: null, content: ['events', 'news', 'team', 'testimonials', 'network'] },
+  editor: { shows: null, schedule: null, content: ['events', 'news', 'newsCategories', 'team', 'testimonials', 'network'] },
   technician: { content: ['live'] },
 };
 

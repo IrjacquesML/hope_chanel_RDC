@@ -7,12 +7,12 @@ export const ROLE_LABELS = {
 
 export const ROLE_INFO = {
   admin: 'Accès complet : contenus, paramètres, sauvegardes et gestion des comptes.',
-  editor: 'Émissions, épisodes, catégories, programme, événements, actualités, équipe, témoignages, réseau et statistiques.',
+  editor: 'Émissions, épisodes, catégories, programme, événements, articles et rubriques, synchro des réseaux sociaux, équipe, témoignages, réseau et statistiques.',
   technician: 'Lecteur du direct, diffusion (plateformes, vMix, OBS) et statistiques.',
 };
 
 const SECTIONS = {
-  editor: ['dashboard', 'stats', 'shows', 'episodes', 'categories', 'schedule', 'events', 'news', 'team', 'testimonials', 'network', 'account'],
+  editor: ['dashboard', 'stats', 'shows', 'episodes', 'categories', 'schedule', 'events', 'news', 'newsCategories', 'social', 'team', 'testimonials', 'network', 'account'],
   technician: ['dashboard', 'stats', 'settings', 'account'],
 };
 

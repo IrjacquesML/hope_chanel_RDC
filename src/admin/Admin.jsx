@@ -8,6 +8,7 @@ import Stats from './Stats';
 import SettingsEditor from './Settings';
 import Account from './Account';
 import Users from './Users';
+import SocialSync from './SocialSync';
 import { ForcePasswordChange, Login } from './Auth';
 import { Avatar } from './accountUi';
 import { ROLE_LABELS, canSee } from './permissions';
@@ -15,6 +16,7 @@ import { slugify } from './fields';
 import { api } from './api';
 import { formatDate, liveSource } from '../lib';
 import { applyColors, settings as siteSettings } from '../siteSettings';
+import { DEFAULT_RUBRIQUES, articleSlug, articleStatus, rubriquesOf } from '../articles';
 
 /* ---------------------------------------------------------------- */
 /* Définition des sections                                          */
@@ -30,6 +32,17 @@ function buildSections(data) {
   const catOptions = showsFile.categories.map((c) => ({ value: c.id, label: c.label.fr }));
   const showTitle = (slug) => showsFile.shows.find((s) => s.slug === slug)?.title || slug;
   const usedInSchedule = (slug) => Object.values(schedule.templates).some((slots) => slots.some((s) => s.show === slug));
+  const rubriques = rubriquesOf(content);
+  const rubriqueOptions = rubriques.map((r) => ({ value: r.id, label: r.label.fr }));
+  const rubriqueLabel = (id) => rubriques.find((r) => r.id === id)?.label.fr || 'Sans rubrique';
+  const STATUS_LABELS = { draft: 'Brouillon', scheduled: 'Programmé', published: 'Publié' };
+  /** Adresse unique d'un article, construite depuis son titre. */
+  const uniqueSlug = (title, id) => {
+    const base = slugify(title) || 'article';
+    let slug = base;
+    for (let n = 2; content.news.some((a) => a.id !== id && articleSlug(a) === slug); n++) slug = `${base}-${n}`;
+    return slug;
+  };
 
   return {
     shows: {
@@ -130,20 +143,68 @@ function buildSections(data) {
       },
     },
     news: {
-      label: 'Actualités',
+      label: 'Articles',
       file: 'content',
       key: 'news',
       editor: {
-        title: 'Actualités',
+        title: 'Articles',
+        description: 'Actualités du site (menu « Actualités »). Un article en brouillon ou daté dans le futur n’est pas visible des visiteurs ; « Voir » permet de le relire sur le site avant publication.',
+        itemName: { add: '+ Nouvel article', new: 'Nouvel article', edit: 'Modifier l’article' },
+        wide: true,
         fields: [
-          { name: 'title', label: 'Titre', type: 'i18n', required: true },
-          { name: 'date', label: 'Date', type: 'date', required: true },
-          { name: 'summary', label: 'Texte', type: 'i18nText', required: true },
-          { name: 'image', label: 'Image', type: 'image' },
+          { name: 'title', label: 'Titre', type: 'i18n', required: true, wide: true },
+          { name: 'category', label: 'Rubrique', type: 'select', options: rubriqueOptions, required: true },
+          { name: 'status', label: 'Statut', type: 'select', required: true, options: [
+            { value: 'published', label: 'Publié' },
+            { value: 'draft', label: 'Brouillon (invisible des visiteurs)' },
+          ] },
+          { name: 'date', label: 'Date de publication', type: 'date', required: true, hint: 'Une date future programme l’article : il apparaîtra tout seul ce jour-là.' },
+          { name: 'author', label: 'Auteur', placeholder: 'Rédaction Hope Channel RDC' },
+          { name: 'featured', label: 'À la une (mis en avant en tête des actualités et sur l’accueil)', type: 'checkbox', wide: true },
+          { name: 'summary', label: 'Chapô (résumé en 1 à 3 phrases)', type: 'i18nText', required: true, hint: 'Affiché sous le titre, sur les cartes d’articles et lors d’un partage sur WhatsApp, Facebook…' },
+          { name: 'body', label: 'Texte de l’article', type: 'richtext', hint: 'Laissez une ligne vide entre deux paragraphes. Les boutons ajoutent intertitres, gras, liens, listes, citations, images et vidéos YouTube ; « Aperçu » montre le rendu.' },
+          { name: 'image', label: 'Image principale (16:9)', type: 'image' },
+          { name: 'imageCaption', label: 'Légende / crédit de l’image', wide: true, placeholder: 'Ex. : Culte d’ouverture de la campagne. Photo : Hope Channel RDC' },
+          { name: 'slug', label: 'Adresse de l’article', immutable: true, wide: true, hint: 'Créée automatiquement depuis le titre (ex. /actualites/grande-campagne-2026). Ne change plus après la création, pour ne pas casser les liens partagés.', pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/, patternMessage: 'Minuscules, chiffres et tirets uniquement' },
         ],
-        makeNew: () => ({ id: uid('news'), date: today(), image: '', title: { fr: '', en: '' }, summary: { fr: '', en: '' } }),
+        makeNew: () => ({ id: uid('news'), slug: '', status: 'published', featured: false, category: rubriqueOptions[0]?.value, author: '', date: today(), image: '', imageCaption: '', title: { fr: '', en: '' }, summary: { fr: '', en: '' }, body: { fr: '', en: '' } }),
+        beforeSave: (item) => (item.slug ? item : { ...item, slug: uniqueSlug(fr(item.title), item.id) }),
+        idKey: 'slug',
         sortItems: (a, b) => b.date.localeCompare(a.date),
-        summary: (n) => ({ title: fr(n.title), subtitle: formatDate(n.date, 'fr'), image: n.image }),
+        filters: [
+          { label: 'Rubrique', options: rubriqueOptions, test: (a, v) => a.category === v },
+          { label: 'Statut', options: Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label })), test: (a, v) => articleStatus(a) === v },
+        ],
+        viewUrl: (a) => `/actualites/${articleSlug(a)}`,
+        summary: (a) => {
+          const status = articleStatus(a);
+          return {
+            title: fr(a.title),
+            subtitle: [rubriqueLabel(a.category), formatDate(a.date, 'fr'), a.author].filter(Boolean).join(' · '),
+            image: a.image,
+            badges: [status !== 'published' && STATUS_LABELS[status], a.featured && 'À la une'].filter(Boolean),
+          };
+        },
+      },
+    },
+    newsCategories: {
+      label: 'Rubriques',
+      file: 'content',
+      key: 'newsCategories',
+      fallback: DEFAULT_RUBRIQUES,
+      editor: {
+        title: 'Rubriques des articles',
+        description: 'Classent les articles et servent de filtres sur la page Actualités. L’ordre de la liste est celui du site.',
+        itemName: { add: '+ Nouvelle rubrique', new: 'Nouvelle rubrique', edit: 'Modifier la rubrique' },
+        sortable: true,
+        fields: [
+          { name: 'label', label: 'Nom', type: 'i18n', required: true },
+          { name: 'id', label: 'Identifiant', immutable: true, hint: 'Généré depuis le nom si vide.' },
+        ],
+        makeNew: () => ({ id: '', label: { fr: '', en: '' } }),
+        beforeSave: (item, isNew) => (isNew && !item.id ? { ...item, id: slugify(item.label.fr) } : item),
+        summary: (c) => ({ title: c.label.fr, subtitle: `${c.label.en || '—'} · ${content.news.filter((a) => a.category === c.id).length} article(s)` }),
+        canDelete: (c) => (content.news.some((a) => a.category === c.id) ? `Impossible : des articles utilisent la rubrique « ${c.label.fr} ». Changez d’abord leur rubrique.` : null),
       },
     },
     team: {
@@ -195,6 +256,7 @@ function buildSections(data) {
         summary: (n) => ({ title: n.city, subtitle: fr(n.channel) }),
       },
     },
+    social: { label: 'Synchro réseaux', custom: 'social' },
     stats: { label: 'Statistiques', custom: 'stats' },
     settings: { label: 'Paramètres', custom: 'settings' },
     backups: { label: 'Sauvegardes', custom: 'backups' },
@@ -206,7 +268,7 @@ function buildSections(data) {
 const NAV_GROUPS = [
   ['Tableau de bord', ['dashboard', 'stats']],
   ['Contenus TV', ['shows', 'episodes', 'categories', 'schedule']],
-  ['Site', ['events', 'news', 'team', 'testimonials', 'network']],
+  ['Site', ['news', 'newsCategories', 'social', 'events', 'team', 'testimonials', 'network']],
   ['Configuration', ['settings', 'users', 'backups']],
 ];
 
@@ -274,7 +336,7 @@ function Dashboard({ data, go, user }) {
     ['Émissions', shows.shows.length, 'shows'],
     ['Épisodes', shows.episodes.length, 'episodes'],
     ['Événements à venir', content.events.filter((e) => e.date >= today()).length, 'events'],
-    ['Actualités', content.news.length, 'news'],
+    ['Articles', content.news.length, 'news'],
   ].filter(([, , key]) => canSee(user, key));
   const latest = [...shows.episodes].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
   const liveOk = Boolean(liveSource(content.live));
@@ -407,11 +469,12 @@ export default function Admin() {
 
   let body;
   if (section === 'dashboard' || !current) body = <Dashboard data={data} go={go} user={user} />;
-  else if (current.custom === 'schedule') body = <ScheduleEditor key={JSON.stringify(data.schedule).length} schedule={data.schedule} shows={data.shows.shows} onSave={(s) => saveFile('schedule', s)} />;
+  else if (current.custom === 'schedule') body = <ScheduleEditor key={JSON.stringify(data.schedule).length} schedule={data.schedule} shows={data.shows.shows} onSave={(s) => saveFile('schedule', s)} onGo={go} />;
   else if (current.custom === 'settings') body = <SettingsEditor data={data} user={user} onSave={saveFile} notify={notify} onAuthLost={onAuthLost} />;
   else if (current.custom === 'account') body = <Account user={user} onUserChange={setUser} notify={notify} onAuthLost={onAuthLost} />;
   else if (current.custom === 'users') body = <Users me={user} notify={notify} onAuthLost={onAuthLost} />;
   else if (current.custom === 'stats') body = <Stats data={data} />;
+  else if (current.custom === 'social') body = <SocialSync user={user} socialLinks={data.content.social} notify={notify} onAuthLost={onAuthLost} onArticleCreated={load} />;
   else if (current.custom === 'backups') body = <Backups onRestored={load} notify={notify} />;
   else {
     const fileData = data[current.file];
@@ -419,7 +482,7 @@ export default function Admin() {
       <CollectionEditor
         key={section}
         {...current.editor}
-        items={fileData[current.key]}
+        items={fileData[current.key] ?? current.fallback ?? []}
         onSave={(items) => saveFile(current.file, { ...fileData, [current.key]: items })}
       />
     );
@@ -496,12 +559,15 @@ export default function Admin() {
 
       <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 p-4 sm:p-8">{body}</main>
 
+      {/* En haut au centre : ne recouvre pas les boutons « Enregistrer » des panneaux */}
       {toast && (
-        <div
-          role={toast.type === 'error' ? 'alert' : 'status'}
-          className={`fixed bottom-6 right-6 z-[60] max-w-sm animate-fade-in rounded-xl px-5 py-3 text-sm font-medium text-white shadow-xl ${toast.type === 'error' ? 'bg-red-600' : 'bg-green-700'}`}
-        >
-          {toast.message}
+        <div className="pointer-events-none fixed inset-x-0 top-4 z-[60] flex justify-center px-4">
+          <div
+            role={toast.type === 'error' ? 'alert' : 'status'}
+            className={`max-w-md animate-fade-in rounded-xl px-5 py-3 text-sm font-medium text-white shadow-xl ${toast.type === 'error' ? 'bg-red-600' : 'bg-green-700'}`}
+          >
+            {toast.message}
+          </div>
         </div>
       )}
     </div>

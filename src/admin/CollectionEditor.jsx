@@ -13,8 +13,12 @@ import { img } from '../lib';
  * - beforeSave(item, isNew) : transforme l'élément avant validation (ex. slug auto)
  * - filters : [{ label, options:[{value,label}], test(item, value) }]
  * - sortable : autorise le réordonnancement manuel
+ * - itemName : { add, new, edit } libellés des boutons et du panneau (ex. « Nouvel article »)
+ * - viewUrl(item) : adresse de l'élément sur le site (lien « Voir »)
+ * - wide : panneau d'édition plus large (rédaction d'articles)
  */
-export default function CollectionEditor({ title, description, items, fields, idKey = 'id', summary, makeNew, onSave, canDelete, beforeSave, filters = [], sortable = false, sortItems }) {
+export default function CollectionEditor({ title, description, items, fields, idKey = 'id', summary, makeNew, onSave, canDelete, beforeSave, filters = [], sortable = false, sortItems, itemName = {}, viewUrl, wide = false }) {
+  const names = { add: '+ Ajouter', new: 'Nouvel élément', edit: 'Modifier', ...itemName };
   const [editing, setEditing] = useState(null); // { item, index } ; index -1 = nouvel élément
   const [errors, setErrors] = useState({});
   const [query, setQuery] = useState('');
@@ -88,7 +92,7 @@ export default function CollectionEditor({ title, description, items, fields, id
           <h1 className="text-2xl font-bold">{title}</h1>
           {description && <p className="mt-1 text-sm text-gray-600">{description}</p>}
         </div>
-        <button type="button" onClick={startNew} className="btn-primary">+ Ajouter</button>
+        <button type="button" onClick={startNew} className="btn-primary">{names.add}</button>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-3">
@@ -146,6 +150,11 @@ export default function CollectionEditor({ title, description, items, fields, id
                   <button type="button" onClick={() => move(index, 1)} className="rounded px-2 py-1 text-gray-500 hover:bg-gray-200" aria-label="Descendre">↓</button>
                 </span>
               )}
+              {viewUrl && (
+                <a href={viewUrl(item)} target="_blank" rel="noopener" className="rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-200">
+                  Voir ↗
+                </a>
+              )}
               <button type="button" onClick={() => { setErrors({}); setEditing({ item, index }); }} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-brand hover:bg-brand/10">
                 Modifier
               </button>
@@ -173,11 +182,11 @@ export default function CollectionEditor({ title, description, items, fields, id
             noValidate
             role="dialog"
             aria-modal="true"
-            aria-label={editing.index === -1 ? 'Nouvel élément' : 'Modifier'}
-            className="flex h-full w-full max-w-2xl animate-fade-in flex-col bg-white shadow-2xl"
+            aria-label={editing.index === -1 ? names.new : names.edit}
+            className={`flex h-full w-full ${wide ? 'max-w-4xl' : 'max-w-2xl'} animate-fade-in flex-col bg-white shadow-2xl`}
           >
             <div className="flex items-center justify-between border-b px-6 py-4">
-              <h2 className="text-lg font-bold">{editing.index === -1 ? 'Nouvel élément' : 'Modifier'}</h2>
+              <h2 className="text-lg font-bold">{editing.index === -1 ? names.new : names.edit}</h2>
               <button type="button" onClick={() => setEditing(null)} className="rounded-lg px-2 py-1 text-gray-500 hover:bg-gray-100" aria-label="Fermer">✕</button>
             </div>
             <div className="grid flex-1 content-start gap-4 overflow-y-auto p-6 sm:grid-cols-2">

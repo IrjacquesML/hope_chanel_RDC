@@ -84,6 +84,21 @@ Fonctionnement :
 - Sécurité : session par cookie `HttpOnly` / `SameSite=Strict` (8 h), blocage 15 min après 5 échecs de connexion par adresse IP (10 par compte), validation des données côté serveur (slugs, références entre émissions, épisodes et programme).
 - Les identifiants (slug d'émission, id d'épisode/catégorie) ne sont pas modifiables après création, pour ne pas casser les liens ; une émission utilisée par des épisodes ou le programme ne peut pas être supprimée.
 
+### Articles (`/admin/news`) et rubriques
+
+- Chaque article a un titre, un chapô, un texte enrichi (syntaxe simple : `## intertitre`, `**gras**`, `[lien](https://…)`, listes, citations, images, adresse YouTube seule sur une ligne = vidéo), une rubrique, un auteur, une image et une adresse `/actualites/<slug>`.
+- Statut **brouillon**, ou **publié** avec une date : une date future programme l'article. Les règles sont dans `src/articles.js`, partagées par le site, le serveur et la compilation.
+- Les brouillons et articles programmés ne sont **jamais** envoyés aux visiteurs : `/api/data` les retire pour qui n'est pas connecté, et le plugin `hide-draft-articles` de `vite.config.js` les retire du site compilé.
+- Partage : le serveur remplit `og:title`, `og:description` et `og:image` de chaque article publié (aperçu WhatsApp / Facebook) ; les articles publiés sont ajoutés au sitemap.
+
+### Synchronisation des réseaux sociaux (`/admin/social`) — `server/social.js`
+
+- **YouTube** : flux public de la chaîne, sans clé (adresse reprise de Paramètres → Réseaux sociaux si elle n'est pas saisie). **Facebook** (page) et **Instagram** (compte professionnel) : API Graph de Meta avec un jeton de page longue durée.
+- Synchronisation automatique (15 min à 24 h) et bouton « Synchroniser maintenant ». Chaque réseau : contenus publiés automatiquement ou « à valider ».
+- Réglages, jetons et contenus importés : `db/social.json` (jamais sur GitHub ; les jetons ne sont jamais renvoyés au navigateur). Images Facebook/Instagram copiées dans `uploads/social/` (leurs adresses expirent).
+- Public : `GET /api/social/feed` (contenus publiés) → bloc « Sur nos réseaux » de l'accueil et page `/sur-nos-reseaux`. « Créer un article » transforme un contenu importé en article brouillon.
+- TikTok : non pris en charge (exige une application TikTok for Developers validée).
+
 ## Statistiques de visionnage — `/admin` → Statistiques
 
 Mesure d'audience intégrée, **anonyme et sans cookie** (pas de bandeau de consentement nécessaire) :
