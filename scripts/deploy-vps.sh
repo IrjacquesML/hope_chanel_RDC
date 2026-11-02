@@ -52,7 +52,10 @@ if ! /usr/local/bin/mediamtx --version 2>/dev/null | grep -qF "$MTX_VERSION"; th
   F="mediamtx_${MTX_VERSION}_linux_amd64.tar.gz"
   curl -fsSL -o "$TMP/$F" "https://github.com/bluenviron/mediamtx/releases/download/$MTX_VERSION/$F"
   curl -fsSL -o "$TMP/checksums.sha256" "https://github.com/bluenviron/mediamtx/releases/download/$MTX_VERSION/checksums.sha256"
-  (cd "$TMP" && grep " $F$" checksums.sha256 | sha256sum -c - >/dev/null) || fail "Téléchargement de MediaMTX corrompu"
+  # Lignes au format « empreinte *fichier » (l'étoile est facultative)
+  EXPECTED=$(awk -v f="$F" '{ n = $2; sub(/^\*/, "", n) } n == f { print $1 }' "$TMP/checksums.sha256")
+  [ -n "$EXPECTED" ] || fail "Empreinte de $F introuvable dans checksums.sha256"
+  echo "$EXPECTED  $TMP/$F" | sha256sum -c - >/dev/null || fail "Téléchargement de MediaMTX corrompu"
   tar -xzf "$TMP/$F" -C "$TMP" mediamtx
   install -m 755 "$TMP/mediamtx" /usr/local/bin/mediamtx
   rm -rf "$TMP"
