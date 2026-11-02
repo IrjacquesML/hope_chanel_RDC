@@ -6,21 +6,10 @@ import { useLang } from '../i18n/LanguageContext';
 import content from '../data/content.json';
 import { settings, siteName } from '../siteSettings';
 
-function Col({ title, links }) {
-  return (
-    <div>
-      <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-accent">{title}</h2>
-      <ul className="mt-3 space-y-0.5">
-        {links.map(([label, to]) => (
-          <li key={to}>
-            <Link to={to} className="inline-flex min-h-[40px] items-center text-white/80 transition hover:text-white hover:underline">{label}</Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
+const title = 'font-heading text-sm font-semibold uppercase tracking-wider text-accent';
+const link = 'inline-flex min-h-[40px] items-center text-white/80 transition hover:text-white hover:underline';
 
+/** Pied de page volontairement sobre : coordonnées, à propos, partenaires. */
 export default function Footer() {
   const { t, tr } = useLang();
   const { contact, social } = content;
@@ -29,10 +18,11 @@ export default function Footer() {
   const about = tr(settings.site?.about) || t('footer.aboutText');
   return (
     <footer className="bg-brand-dark text-white">
-      <div className="container-page grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-4">
-        <div className="lg:col-span-1">
+      <div className={`container-page grid gap-10 py-14 md:grid-cols-2 ${partners.length ? 'lg:grid-cols-3' : ''}`}>
+        <div>
           <Link to="/" aria-label={`${siteName()} — ${t('common.home')}`} className="inline-block"><Logo onDark /></Link>
-          <address className="mt-6 space-y-1 text-sm not-italic text-white/80">
+          <h2 className={`${title} mt-6`}>{t('footer.contact')}</h2>
+          <address className="mt-3 space-y-1 text-sm not-italic text-white/80">
             {contact.address && <p className="flex gap-2 pb-1"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" />{contact.address}</p>}
             {contact.phones.map((p) => (
               <p key={p} className="flex items-center gap-2">
@@ -48,70 +38,51 @@ export default function Footer() {
             )}
             {tr(contact.hours) && <p className="flex gap-2 pt-1"><Clock className="mt-0.5 h-4 w-4 shrink-0 text-accent" />{tr(contact.hours)}</p>}
           </address>
+          {socials.length > 0 && (
+            <ul className="mt-4 flex flex-wrap gap-2" aria-label={t('footer.follow')}>
+              {socials.map(({ key, label, Icon }) => (
+                <li key={key}>
+                  <a
+                    href={social[key]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${siteName()} — ${label}`}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:-translate-y-0.5 hover:bg-accent hover:text-ink"
+                  >
+                    <Icon />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
-        <Col
-          title={t('footer.explore')}
-          links={[
-            [t('nav.live'), '/regarder'],
-            [t('nav.week'), '/programme?vue=semaine'],
-            [t('nav.shows'), '/emissions'],
-            [t('nav.events'), '/evenements'],
-            [t('common.donate'), '/dons'],
-          ]}
-        />
-        <Col
-          title={t('footer.info')}
-          links={[
-            [t('footer.faq'), '/faq'],
-            [t('footer.privacy'), '/confidentialite'],
-            [t('footer.terms'), '/conditions'],
-            [t('nav.contact'), '/contact'],
-          ]}
-        />
         <div>
-          <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-accent">{t('footer.about')}</h2>
-          <p className="mt-4 text-sm text-white/80">{about}</p>
-          <ul className="mt-3 space-y-0.5">
-            {[[t('nav.team'), '/apropos#equipe'], [t('nav.news'), '/actualites'], [t('nav.network'), '/reseau']].map(([l, to]) => (
-              <li key={to}><Link to={to} className="inline-flex min-h-[40px] items-center text-white/80 hover:text-white hover:underline">{l}</Link></li>
-            ))}
-          </ul>
-          {socials.length > 0 && <p className="mt-6 text-sm font-semibold">{t('footer.follow')}</p>}
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {socials.map(({ key, label, Icon }) => (
-              <li key={key}>
-                <a
-                  href={social[key]}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`${siteName()} — ${label}`}
-                  className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 transition hover:-translate-y-0.5 hover:bg-accent hover:text-ink"
-                >
-                  <Icon />
-                </a>
-              </li>
-            ))}
-          </ul>
+          <h2 className={title}>{t('footer.about')}</h2>
+          <p className="mt-3 text-sm leading-relaxed text-white/80">{about}</p>
+          <Link to="/apropos" className={`${link} text-sm font-semibold text-white`}>{t('footer.more')} →</Link>
         </div>
-      </div>
-      {partners.length > 0 && (
-        <div className="border-t border-white/10">
-          <div className="container-page flex flex-col gap-2 py-5 text-sm sm:flex-row sm:items-center sm:gap-4">
-            <h2 className="shrink-0 font-heading font-semibold uppercase tracking-wider text-accent">{t('footer.partners')}</h2>
-            <ul className="flex flex-wrap gap-x-5">
+
+        {partners.length > 0 && (
+          <div>
+            <h2 className={title}>{t('footer.partners')}</h2>
+            <ul className="mt-3 space-y-0.5 text-sm">
               {partners.map((p) => (
                 <li key={`${p.name}-${p.url}`}>
-                  <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[40px] items-center text-white/80 transition hover:text-white hover:underline">{p.name}</a>
+                  <a href={p.url} target="_blank" rel="noopener noreferrer" className={link}>{p.name}</a>
                 </li>
               ))}
             </ul>
           </div>
-        </div>
-      )}
+        )}
+      </div>
       <div className="border-t border-white/10">
-        <div className="container-page flex flex-col items-center justify-between gap-3 py-5 text-sm text-white/70 sm:flex-row">
+        <div className="container-page flex flex-col items-center justify-between gap-2 py-5 text-sm text-white/70 sm:flex-row">
           <p>© {new Date().getFullYear()} {settings.site?.copyright || siteName()}. {t('footer.rights')}</p>
+          <p className="flex gap-4">
+            <Link to="/confidentialite" className="hover:text-white hover:underline">{t('footer.privacy')}</Link>
+            <Link to="/conditions" className="hover:text-white hover:underline">{t('footer.terms')}</Link>
+          </p>
         </div>
       </div>
     </footer>
