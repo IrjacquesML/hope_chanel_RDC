@@ -3,7 +3,7 @@
 # Usage, depuis le dossier du site :
 #   git checkout -- . && git pull origin main && sudo bash scripts/deploy-vps.sh
 # Peut être relancé à chaque mise à jour : chaque étape vérifie d'abord si elle est déjà faite.
-# Ne touche qu'à ce site : son dossier, son application PM2 et son fichier Nginx.
+# Ne touche qu'à ce site : son dossier, son application PM2, son fichier Nginx et le port 1935 (vMix) du pare-feu.
 set -euo pipefail
 
 APP=hopechannelrdc
@@ -20,7 +20,7 @@ fail() { printf '\033[31m✘ %s\033[0m\n' "$1"; exit 1; }
 [ "$(id -u)" = 0 ] || fail "Lancez ce script avec sudo (ou en root)."
 
 # ---------------------------------------------------------------- Node.js 22+
-step "1/6 Node.js"
+step "1/7 Node.js"
 NODE_MAJOR=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)
 if [ "$NODE_MAJOR" -lt 22 ]; then
   V=$(curl -fsSL https://nodejs.org/dist/index.json | grep -o '"version":"v22\.[0-9.]*"' | head -1 | cut -d'"' -f4)
@@ -43,8 +43,29 @@ fi
 node -e "require('node:sqlite')" 2>/dev/null || fail "Node.js $(node -v) trop ancien (22.13 minimum)"
 ok "Node.js $(node -v)"
 
+# ---------------------------------------------------------------- MediaMTX (direct vMix)
+# Lancé par le serveur Node avec mediamtx/mediamtx.yml : il suffit que l'exécutable soit dans /usr/local/bin.
+step "2/7 MediaMTX (direct vMix)"
+MTX_VERSION=${MTX_VERSION:-v1.21.3}
+if ! /usr/local/bin/mediamtx --version 2>/dev/null | grep -qF "$MTX_VERSION"; then
+  TMP=$(mktemp -d)
+  F="mediamtx_${MTX_VERSION}_linux_amd64.tar.gz"
+  curl -fsSL -o "$TMP/$F" "https://github.com/bluenviron/mediamtx/releases/download/$MTX_VERSION/$F"
+  curl -fsSL -o "$TMP/checksums.sha256" "https://github.com/bluenviron/mediamtx/releases/download/$MTX_VERSION/checksums.sha256"
+  (cd "$TMP" && grep " $F$" checksums.sha256 | sha256sum -c - >/dev/null) || fail "Téléchargement de MediaMTX corrompu"
+  tar -xzf "$TMP/$F" -C "$TMP" mediamtx
+  install -m 755 "$TMP/mediamtx" /usr/local/bin/mediamtx
+  rm -rf "$TMP"
+fi
+ok "MediaMTX $(/usr/local/bin/mediamtx --version)"
+# Port RTMP pour vMix (la vidéo n'est publiée qu'avec la clé de diffusion de l'administration)
+if command -v ufw >/dev/null && ufw status | grep -q '^Status: active'; then
+  ufw status | grep -q '^1935/tcp ' || ufw allow 1935/tcp comment 'vMix RTMP (Hope Chanel RDC)' >/dev/null
+  ok "Pare-feu : port 1935/tcp ouvert"
+fi
+
 # ---------------------------------------------------------------- .env
-step "2/6 Fichier .env"
+step "3/7 Fichier .env"
 [ -f .env ] || fail "Fichier .env absent : copiez .env.example en .env et remplissez-le"
 if ! grep -q '^MYSQL_DATABASE=' .env; then
   cp .env ".env.avant-$(date +%Y%m%d-%H%M%S)"
@@ -66,14 +87,14 @@ PW=$(grep '^ADMIN_PASSWORD=' .env | head -1 | cut -d= -f2-)
 ok ".env complet"
 
 # ---------------------------------------------------------------- Code et compilation
-step "3/6 Dépendances et compilation"
+step "4/7 Dépendances et compilation"
 git config core.fileMode false
 npm ci --no-audit --no-fund
 npm run build
 ok "Site compilé dans dist/"
 
 # ---------------------------------------------------------------- PM2
-step "4/6 Serveur Node (PM2)"
+step "5/7 Serveur Node (PM2)"
 pm2 delete "$APP" >/dev/null 2>&1 || true
 pm2 start server/index.js --name "$APP" --cwd "$DIR" --node-args="--env-file=.env" >/dev/null
 pm2 save >/dev/null
@@ -89,7 +110,7 @@ fi
 ok "Serveur Node en marche sur le port $PORT (connexion : réponse 401 attendue = OK)"
 
 # ---------------------------------------------------------------- Nginx
-step "5/6 Nginx"
+step "6/7 Nginx"
 if grep -q "proxy_pass http://127.0.0.1:$PORT" "$NGINX_FILE" 2>/dev/null; then
   ok "Nginx transmet déjà les demandes au serveur Node"
 else
@@ -144,7 +165,7 @@ NGINX
 fi
 
 # ---------------------------------------------------------------- Vérification
-step "6/6 Vérification publique"
+step "7/7 Vérification publique"
 # Nginx recharge en douceur : on laisse quelques secondes aux anciens processus pour s'arrêter
 for i in $(seq 1 10); do
   CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "https://$DOMAIN/api/login" --resolve "$DOMAIN:443:127.0.0.1" -H 'Content-Type: application/json' -d '{"email":"test@test.cd","password":"x"}' || true)
@@ -153,5 +174,16 @@ for i in $(seq 1 10); do
 done
 [ "$CODE" = 401 ] || fail "https://$DOMAIN/api/login répond $CODE au lieu de 401"
 ok "https://$DOMAIN/api/login répond correctement (plus de 405)"
+# Relais vidéo démarré par le serveur Node ?
+for i in $(seq 1 15); do
+  curl -sf -o /dev/null http://127.0.0.1:9997/v3/paths/list && break
+  sleep 1
+done
+if curl -sf -o /dev/null http://127.0.0.1:9997/v3/paths/list; then
+  ok "Relais vidéo MediaMTX démarré : vMix → rtmp://$DOMAIN:1935/live (clé : Admin → Diffusion)"
+else
+  pm2 logs "$APP" --lines 15 --nostream --no-color | grep -i mediamtx || true
+  fail "MediaMTX ne s'est pas lancé : voir le journal ci-dessus"
+fi
 
 printf '\n\033[1;32mTerminé.\033[0m Connexion : https://%s/login avec ADMIN_EMAIL / ADMIN_PASSWORD du fichier .env\n' "$DOMAIN"

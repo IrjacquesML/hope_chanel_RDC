@@ -67,7 +67,8 @@ export function startMediamtx({ root, port }) {
   if (process.env.MEDIAMTX_AUTO === '0') return;
   const bin = findBinary(root);
   if (!bin) {
-    console.log('[mediamtx] introuvable : placez mediamtx.exe dans le dossier mediamtx/ du projet (ou C:\\mediamtx). Le direct auto-hébergé est désactivé.');
+    const where = process.platform === 'win32' ? 'mediamtx.exe dans le dossier mediamtx/ du projet (ou C:\\mediamtx)' : 'mediamtx dans /usr/local/bin (bash scripts/deploy-vps.sh le fait)';
+    console.log(`[mediamtx] introuvable : placez ${where}. Le direct auto-hébergé est désactivé.`);
     return;
   }
   let child = null;
