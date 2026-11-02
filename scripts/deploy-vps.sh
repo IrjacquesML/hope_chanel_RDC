@@ -145,7 +145,12 @@ fi
 
 # ---------------------------------------------------------------- Vérification
 step "6/6 Vérification publique"
-CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "https://$DOMAIN/api/login" --resolve "$DOMAIN:443:127.0.0.1" -H 'Content-Type: application/json' -d '{"email":"test@test.cd","password":"x"}' || true)
+# Nginx recharge en douceur : on laisse quelques secondes aux anciens processus pour s'arrêter
+for i in $(seq 1 10); do
+  CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "https://$DOMAIN/api/login" --resolve "$DOMAIN:443:127.0.0.1" -H 'Content-Type: application/json' -d '{"email":"test@test.cd","password":"x"}' || true)
+  [ "$CODE" = 401 ] && break
+  sleep 1
+done
 [ "$CODE" = 401 ] || fail "https://$DOMAIN/api/login répond $CODE au lieu de 401"
 ok "https://$DOMAIN/api/login répond correctement (plus de 405)"
 
