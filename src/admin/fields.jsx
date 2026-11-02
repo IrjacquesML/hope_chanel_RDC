@@ -80,6 +80,23 @@ function ListInput({ id, value = [], onChange }) {
   );
 }
 
+/** Liste de liens { name, url } (ex. partenaires du pied de page). */
+function LinksInput({ id, value = [], onChange }) {
+  const set = (i, key, v) => onChange(value.map((x, j) => (j === i ? { ...x, [key]: v } : x)));
+  return (
+    <div className="space-y-2">
+      {value.map((v, i) => (
+        <div key={i} className="grid gap-2 sm:grid-cols-[1fr_1.4fr_auto]">
+          <input id={i === 0 ? id : undefined} value={v.name || ''} onChange={(e) => set(i, 'name', e.target.value)} placeholder="Nom" aria-label={`Nom du partenaire ${i + 1}`} className={inputCls} />
+          <input type="url" value={v.url || ''} onChange={(e) => set(i, 'url', e.target.value.trim())} placeholder="https://www.exemple.org" aria-label={`Lien du partenaire ${i + 1}`} className={inputCls} />
+          <button type="button" onClick={() => onChange(value.filter((_, j) => j !== i))} className="rounded-lg px-3 text-sm text-red-700 hover:bg-red-50" aria-label="Retirer">✕</button>
+        </div>
+      ))}
+      <button type="button" onClick={() => onChange([...value, { name: '', url: '' }])} className="text-sm font-semibold text-brand hover:underline">+ Ajouter un partenaire</button>
+    </div>
+  );
+}
+
 function ColorInput({ id, value, onChange }) {
   const valid = /^#[\da-f]{6}$/i.test(value || '');
   return (
@@ -114,7 +131,7 @@ function SecretInput({ id, value, onChange, placeholder }) {
 
 /**
  * Champ générique piloté par une définition :
- * { name, label, type: text|textarea|number|date|time|url|email|checkbox|select|i18n|i18nText|image|list|color|secret, options, required, hint, wide, immutable }
+ * { name, label, type: text|textarea|number|date|time|url|email|checkbox|select|i18n|i18nText|image|list|links|color|secret, options, required, hint, wide, immutable }
  */
 export function Field({ def, value, onChange, error, locked }) {
   const id = useId();
@@ -177,6 +194,9 @@ export function Field({ def, value, onChange, error, locked }) {
     case 'list':
       control = <ListInput id={id} value={value} onChange={onChange} />;
       break;
+    case 'links':
+      control = <LinksInput id={id} value={value} onChange={onChange} />;
+      break;
     case 'color':
       control = <ColorInput id={id} value={value} onChange={onChange} />;
       break;
@@ -188,7 +208,7 @@ export function Field({ def, value, onChange, error, locked }) {
   }
 
   return (
-    <Wrapper id={id} label={def.label} hint={disabled ? 'Non modifiable après création (utilisé dans les liens).' : def.hint} required={def.required} error={error} wide={def.wide || ['textarea', 'i18nText', 'image', 'list'].includes(def.type)}>
+    <Wrapper id={id} label={def.label} hint={disabled ? 'Non modifiable après création (utilisé dans les liens).' : def.hint} required={def.required} error={error} wide={def.wide || ['textarea', 'i18nText', 'image', 'list', 'links'].includes(def.type)}>
       {control}
     </Wrapper>
   );

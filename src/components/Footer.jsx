@@ -25,6 +25,7 @@ export default function Footer() {
   const { t, tr } = useLang();
   const { contact, social } = content;
   const socials = activeSocials(social);
+  const partners = (content.partners || []).filter((p) => p.name?.trim() && p.url?.trim());
   const about = tr(settings.site?.about) || t('footer.aboutText');
   return (
     <footer className="bg-brand-dark text-white">
@@ -94,6 +95,20 @@ export default function Footer() {
           </ul>
         </div>
       </div>
+      {partners.length > 0 && (
+        <div className="border-t border-white/10">
+          <div className="container-page flex flex-col gap-2 py-5 text-sm sm:flex-row sm:items-center sm:gap-4">
+            <h2 className="shrink-0 font-heading font-semibold uppercase tracking-wider text-accent">{t('footer.partners')}</h2>
+            <ul className="flex flex-wrap gap-x-5">
+              {partners.map((p) => (
+                <li key={`${p.name}-${p.url}`}>
+                  <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[40px] items-center text-white/80 transition hover:text-white hover:underline">{p.name}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
       <div className="border-t border-white/10">
         <div className="container-page flex flex-col items-center justify-between gap-3 py-5 text-sm text-white/70 sm:flex-row">
           <p>© {new Date().getFullYear()} {settings.site?.copyright || siteName()}. {t('footer.rights')}</p>

@@ -66,6 +66,17 @@ const TABS = [
     intro: 'Seuls les réseaux renseignés s’affichent sur le site (pied de page et menu mobile). Laissez vide pour masquer un réseau.',
   },
   {
+    key: 'partenaires',
+    label: 'Partenaires',
+    file: 'content',
+    groups: [
+      ['Partenaires (pied de page)', [
+        { name: 'partners', label: 'Partenaires', type: 'links', hint: 'Seul le nom est affiché sur le site ; un clic dessus ouvre le site du partenaire dans un nouvel onglet.' },
+      ]],
+    ],
+    intro: 'Ajoutez le nom et l’adresse du site de chaque partenaire. La liste s’affiche dans cet ordre en bas de toutes les pages. Laissez vide pour masquer la rubrique.',
+  },
+  {
     key: 'direct',
     label: 'Lecteur du direct',
     file: 'content',

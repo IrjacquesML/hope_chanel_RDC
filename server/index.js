@@ -166,6 +166,11 @@ function validate(name, d) {
     if (d.contact.email && !EMAIL_RE.test(d.contact.email)) return 'Adresse e-mail de contact invalide';
     if (!Array.isArray(d.contact.phones)) return 'Les téléphones doivent être une liste';
     for (const [k, v] of Object.entries(d.social)) if (v && !/^https:\/\//.test(v)) return `Le lien « ${k} » doit commencer par https://`;
+    if (d.partners !== undefined && !Array.isArray(d.partners)) return 'La section « partners » doit être une liste';
+    for (const p of d.partners || []) {
+      if (!isObj(p) || !String(p.name || '').trim()) return 'Chaque partenaire doit avoir un nom';
+      if (!/^https?:\/\/[^\s/]+\.[^\s]+$/.test(String(p.url || '').trim())) return `Lien invalide pour le partenaire « ${p.name} » (ex. : https://www.exemple.org)`;
+    }
   }
   if (name === 'settings') {
     for (const k of ['site', 'appearance', 'announcement', 'maintenance', 'integrations']) if (!isObj(d[k])) return `Section « ${k} » manquante`;
