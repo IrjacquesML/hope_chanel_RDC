@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Mise en ligne / mise à jour de Hope Chanel RDC sur le VPS (Ubuntu, Nginx, PM2, MySQL).
+# Mise en ligne / mise à jour de Hope Channel RDC sur le VPS (Ubuntu, Nginx, PM2, MySQL).
 # Usage, depuis le dossier du site :
 #   git checkout -- . && git pull origin main && sudo bash scripts/deploy-vps.sh
 # Peut être relancé à chaque mise à jour : chaque étape vérifie d'abord si elle est déjà faite.
@@ -63,7 +63,7 @@ fi
 ok "MediaMTX $(/usr/local/bin/mediamtx --version)"
 # Port RTMP pour vMix (la vidéo n'est publiée qu'avec la clé de diffusion de l'administration)
 if command -v ufw >/dev/null && ufw status | grep -q '^Status: active'; then
-  ufw status | grep -q '^1935/tcp ' || ufw allow 1935/tcp comment 'vMix RTMP (Hope Chanel RDC)' >/dev/null
+  ufw status | grep -q '^1935/tcp ' || ufw allow 1935/tcp comment 'vMix RTMP (Hope Channel RDC)' >/dev/null
   ok "Pare-feu : port 1935/tcp ouvert"
 fi
 

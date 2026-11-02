@@ -135,7 +135,7 @@ export default function Users({ me, notify, onAuthLost }) {
       </div>
 
       {reveal && (
-        <SecretReveal title={reveal.title} text={`Administration Hope Chanel RDC\nAdresse : ${location.origin}/login\nE-mail : ${reveal.email}\nMot de passe provisoire : ${reveal.password}`} onClose={() => setReveal(null)}>
+        <SecretReveal title={reveal.title} text={`Administration Hope Channel RDC\nAdresse : ${location.origin}/login\nE-mail : ${reveal.email}\nMot de passe provisoire : ${reveal.password}`} onClose={() => setReveal(null)}>
           <dl className="grid gap-1 text-sm sm:grid-cols-[auto_1fr] sm:gap-x-4">
             <dt className="text-amber-900">Adresse</dt><dd className="font-medium">{location.origin}/login</dd>
             <dt className="text-amber-900">E-mail</dt><dd className="font-medium">{reveal.email}</dd>

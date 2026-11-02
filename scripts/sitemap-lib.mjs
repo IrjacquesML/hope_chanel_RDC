@@ -1,4 +1,4 @@
-export const BASE_URL = process.env.SITE_URL || 'https://www.hopechanelrdc.org';
+export const BASE_URL = process.env.SITE_URL || 'https://hckinshasa-rdc.org';
 
 const STATIC_ROUTES = [
   ['/', '1.0', 'daily'],

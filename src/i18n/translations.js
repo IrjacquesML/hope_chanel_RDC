@@ -67,7 +67,7 @@ const fr = {
     donateTitle: "Ensemble, semons l'espoir dans chaque foyer",
     donateText: "Chaque don permet de diffuser des programmes d'espoir, de santé et de foi à des millions de Congolais, gratuitement.",
     howTitle: 'Comment nous regarder',
-    howSub: 'Hope Chanel RDC vous accompagne partout, sur tous vos écrans.',
+    howSub: 'Hope Channel RDC vous accompagne partout, sur tous vos écrans.',
     newsletterTitle: 'Recevez notre lettre d’espoir',
     newsletterText: 'Programmes de la semaine, nouveaux épisodes et événements : une fois par semaine, sans spam.',
     newsletterPlaceholder: 'Votre adresse e-mail',
@@ -75,7 +75,7 @@ const fr = {
     newsletterOk: 'Merci ! Votre inscription est bien enregistrée.',
     nowOnAir: "À l'antenne",
     liveNowTitle: 'En direct',
-    liveNowText: 'Suivez le direct de Hope Chanel RDC, depuis Kinshasa.',
+    liveNowText: 'Suivez le direct de Hope Channel RDC, depuis Kinshasa.',
     liveNowMore: 'Programme et page du direct',
   },
   how: {
@@ -83,10 +83,10 @@ const fr = {
     mobile: { title: 'Application mobile', text: 'Android et iOS, avec mode économie de données.' },
     youtube: { title: 'YouTube', text: 'Le direct et tous les replays sur notre chaîne.' },
     radio: { title: 'Radio', text: 'Nos programmes audio sur la FM dans plusieurs provinces.' },
-    web: { title: 'Site web', text: 'Le direct en streaming sur hopechanelrdc.org.' },
+    web: { title: 'Site web', text: 'Le direct en streaming sur hckinshasa-rdc.org.' },
   },
   watch: {
-    title: 'Regarder Hope Chanel RDC en direct',
+    title: 'Regarder Hope Channel RDC en direct',
     intro: 'Suivez notre programme en direct, 24h/24, depuis Kinshasa.',
     unmute: 'Activer le son',
     notConfigured: "Le direct n'est pas encore configuré.",
@@ -113,7 +113,7 @@ const fr = {
     allEpisodesIntro: 'Tous les épisodes récents, toutes émissions confondues.',
   },
   donate: {
-    title: 'Soutenir Hope Chanel RDC',
+    title: 'Soutenir Hope Channel RDC',
     intro: "Votre générosité permet de diffuser gratuitement l'espoir dans toute la RDC.",
     frequency: 'Fréquence du don',
     once: 'Don unique',
@@ -156,10 +156,10 @@ const fr = {
     addToAgenda: 'Plus d’infos',
   },
   about: {
-    title: 'À propos de Hope Chanel RDC',
+    title: 'À propos de Hope Channel RDC',
     intro: "Une chaîne chrétienne congolaise au service de l'espoir, de la santé et de la famille.",
     missionTitle: 'Notre mission',
-    mission: "Hope Chanel RDC produit et diffuse des programmes qui nourrissent la foi, fortifient les familles et améliorent la qualité de vie. Nous voulons que chaque Congolais, en ville comme au village, ait accès gratuitement à un message d'espoir.",
+    mission: "Hope Channel RDC produit et diffuse des programmes qui nourrissent la foi, fortifient les familles et améliorent la qualité de vie. Nous voulons que chaque Congolais, en ville comme au village, ait accès gratuitement à un message d'espoir.",
     valuesTitle: 'Nos valeurs',
     values: [
       { title: 'Espoir', text: 'Un message positif, centré sur la Bible et tourné vers l’avenir.' },
@@ -184,7 +184,7 @@ const fr = {
     ok: 'Merci ! Votre message a bien été envoyé (démonstration).',
     address: 'Adresse',
     phone: 'Téléphone',
-    mapTitle: 'Carte de localisation de Hope Chanel RDC à Kinshasa',
+    mapTitle: 'Carte de localisation de Hope Channel RDC à Kinshasa',
     hours: "Heures d'ouverture",
   },
   news: {
@@ -193,8 +193,8 @@ const fr = {
   },
   network: {
     title: 'Notre réseau',
-    intro: 'Hope Chanel RDC est diffusée dans plusieurs provinces, et chaque mois de nouvelles villes nous rejoignent.',
-    partner: 'Vous souhaitez relayer Hope Chanel RDC dans votre ville ?',
+    intro: 'Hope Channel RDC est diffusée dans plusieurs provinces, et chaque mois de nouvelles villes nous rejoignent.',
+    partner: 'Vous souhaitez relayer Hope Channel RDC dans votre ville ?',
     partnerCta: 'Devenir partenaire',
   },
   legal: {
@@ -210,7 +210,7 @@ const fr = {
     faq: 'FAQ',
     privacy: 'Confidentialité',
     terms: 'Conditions',
-    aboutText: "Hope Chanel RDC est une chaîne de télévision chrétienne basée à Kinshasa, qui diffuse des programmes d'espoir pour toute la famille.",
+    aboutText: "Hope Channel RDC est une chaîne de télévision chrétienne basée à Kinshasa, qui diffuse des programmes d'espoir pour toute la famille.",
     follow: 'Suivez-nous',
     partners: 'Nos partenaires',
     rights: 'Tous droits réservés.',
@@ -287,7 +287,7 @@ const en = {
     donateTitle: 'Together, let’s bring hope into every home',
     donateText: 'Every gift helps broadcast programmes of hope, health and faith to millions of Congolese people, free of charge.',
     howTitle: 'How to watch',
-    howSub: 'Hope Chanel RDC goes with you everywhere, on every screen.',
+    howSub: 'Hope Channel RDC goes with you everywhere, on every screen.',
     newsletterTitle: 'Get our letter of hope',
     newsletterText: 'This week’s programmes, new episodes and events: once a week, no spam.',
     newsletterPlaceholder: 'Your email address',
@@ -295,7 +295,7 @@ const en = {
     newsletterOk: 'Thank you! You are now subscribed.',
     nowOnAir: 'On air',
     liveNowTitle: 'Live',
-    liveNowText: 'Watch Hope Chanel RDC live from Kinshasa.',
+    liveNowText: 'Watch Hope Channel RDC live from Kinshasa.',
     liveNowMore: 'Schedule and live page',
   },
   how: {
@@ -303,10 +303,10 @@ const en = {
     mobile: { title: 'Mobile app', text: 'Android and iOS, with a data-saver mode.' },
     youtube: { title: 'YouTube', text: 'Live stream and every replay on our channel.' },
     radio: { title: 'Radio', text: 'Our audio programmes on FM in several provinces.' },
-    web: { title: 'Website', text: 'Live streaming on hopechanelrdc.org.' },
+    web: { title: 'Website', text: 'Live streaming on hckinshasa-rdc.org.' },
   },
   watch: {
-    title: 'Watch Hope Chanel RDC live',
+    title: 'Watch Hope Channel RDC live',
     intro: 'Follow our live programming, 24/7, from Kinshasa.',
     unmute: 'Turn sound on',
     notConfigured: 'The live stream is not configured yet.',
@@ -333,7 +333,7 @@ const en = {
     allEpisodesIntro: 'All recent episodes, across every show.',
   },
   donate: {
-    title: 'Support Hope Chanel RDC',
+    title: 'Support Hope Channel RDC',
     intro: 'Your generosity helps us broadcast hope across the DRC, free of charge.',
     frequency: 'Gift frequency',
     once: 'One-time',
@@ -376,10 +376,10 @@ const en = {
     addToAgenda: 'More info',
   },
   about: {
-    title: 'About Hope Chanel RDC',
+    title: 'About Hope Channel RDC',
     intro: 'A Congolese Christian channel serving hope, health and family.',
     missionTitle: 'Our mission',
-    mission: 'Hope Chanel RDC produces and broadcasts programmes that nourish faith, strengthen families and improve quality of life. We want every Congolese person, in town or village, to have free access to a message of hope.',
+    mission: 'Hope Channel RDC produces and broadcasts programmes that nourish faith, strengthen families and improve quality of life. We want every Congolese person, in town or village, to have free access to a message of hope.',
     valuesTitle: 'Our values',
     values: [
       { title: 'Hope', text: 'A positive, Bible-centred, forward-looking message.' },
@@ -404,7 +404,7 @@ const en = {
     ok: 'Thank you! Your message has been sent (demo).',
     address: 'Address',
     phone: 'Phone',
-    mapTitle: 'Map showing Hope Chanel RDC in Kinshasa',
+    mapTitle: 'Map showing Hope Channel RDC in Kinshasa',
     hours: 'Opening hours',
   },
   news: {
@@ -413,8 +413,8 @@ const en = {
   },
   network: {
     title: 'Our network',
-    intro: 'Hope Chanel RDC broadcasts in several provinces, with new cities joining every month.',
-    partner: 'Would you like to relay Hope Chanel RDC in your city?',
+    intro: 'Hope Channel RDC broadcasts in several provinces, with new cities joining every month.',
+    partner: 'Would you like to relay Hope Channel RDC in your city?',
     partnerCta: 'Become a partner',
   },
   legal: {
@@ -430,7 +430,7 @@ const en = {
     faq: 'FAQ',
     privacy: 'Privacy',
     terms: 'Terms',
-    aboutText: 'Hope Chanel RDC is a Christian television channel based in Kinshasa, broadcasting programmes of hope for the whole family.',
+    aboutText: 'Hope Channel RDC is a Christian television channel based in Kinshasa, broadcasting programmes of hope for the whole family.',
     follow: 'Follow us',
     partners: 'Our partners',
     rights: 'All rights reserved.',

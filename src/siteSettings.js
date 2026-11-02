@@ -2,10 +2,10 @@ import settings from './data/settings.json';
 
 export { settings };
 
-const DEFAULT_URL = 'https://www.hopechanelrdc.org';
+const DEFAULT_URL = 'https://hckinshasa-rdc.org';
 
 /** Nom du site et adresse publique (sans « / » final), tels que définis dans l'administration. */
-export const siteName = () => settings.site?.name || 'Hope Chanel RDC';
+export const siteName = () => settings.site?.name || 'Hope Channel RDC';
 export const siteUrl = () => (settings.site?.url || DEFAULT_URL).replace(/\/+$/, '');
 
 /** « #0B3C7A » → « 11 60 122 » (format attendu par les variables CSS de Tailwind). */

@@ -5,19 +5,22 @@ import SectionTitle from '../components/SectionTitle';
 import { useLang } from '../i18n/LanguageContext';
 import { useSeo } from '../hooks/useSeo';
 import content from '../data/content.json';
+import { settings } from '../siteSettings';
 
 export default function About() {
   const { t, tr } = useLang();
-  useSeo({ title: t('nav.about'), description: t('about.intro') });
+  // Textes modifiables dans Paramètres → À propos ; à défaut, textes intégrés au site
+  const text = (key) => tr(settings.aboutPage?.[key]) || settings.aboutPage?.[key]?.fr || t(`about.${key}`);
+  useSeo({ title: t('nav.about'), description: text('intro') });
 
   return (
     <>
-      <PageHeader title={t('about.title')} intro={t('about.intro')} />
+      <PageHeader title={text('title')} intro={text('intro')} />
 
       <section className="container-page grid items-center gap-10 py-14 lg:grid-cols-2">
         <div>
           <SectionTitle title={t('about.missionTitle')} />
-          <p className="text-lg leading-relaxed text-gray-700">{t('about.mission')}</p>
+          <p className="whitespace-pre-line text-lg leading-relaxed text-gray-700">{text('mission')}</p>
           <dl className="mt-8 grid grid-cols-3 gap-4">
             {t('about.stats').map((s) => (
               <div key={s.label} className="flex flex-col rounded-2xl bg-mist p-4 text-center">

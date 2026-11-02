@@ -28,38 +28,38 @@ const LEGAL = {
     fr: [
       ['Données collectées', "Nous collectons uniquement les données que vous nous transmettez volontairement (formulaire de contact, newsletter, dons) : nom, adresse e-mail, numéro de téléphone."],
       ['Utilisation', "Ces données servent exclusivement à répondre à vos demandes, à vous envoyer notre lettre d'information et à traiter vos dons. Elles ne sont jamais vendues."],
-      ['Paiements', "Les paiements Mobile Money et carte sont traités par des prestataires certifiés. Hope Chanel RDC ne conserve aucune donnée de carte bancaire."],
+      ['Paiements', "Les paiements Mobile Money et carte sont traités par des prestataires certifiés. Hope Channel RDC ne conserve aucune donnée de carte bancaire."],
       ['Vos droits', 'Vous pouvez demander l’accès, la rectification ou la suppression de vos données en écrivant à hopechannelrdc@gmail.com.'],
     ],
     en: [
       ['Data collected', 'We only collect data you voluntarily provide (contact form, newsletter, donations): name, email address, phone number.'],
       ['Use', 'This data is used solely to answer your requests, send our newsletter and process your gifts. It is never sold.'],
-      ['Payments', 'Mobile Money and card payments are processed by certified providers. Hope Chanel RDC stores no card data.'],
+      ['Payments', 'Mobile Money and card payments are processed by certified providers. Hope Channel RDC stores no card data.'],
       ['Your rights', 'You may request access, correction or deletion of your data by writing to hopechannelrdc@gmail.com.'],
     ],
   },
   terms: {
     titleKey: 'legal.termsTitle',
     fr: [
-      ['Objet', "Les présentes conditions régissent l'utilisation du site Hope Chanel RDC et de ses services de diffusion en ligne."],
-      ['Propriété intellectuelle', "Les émissions, textes, logos et visuels sont la propriété de Hope Chanel RDC ou de leurs auteurs. Toute reproduction sans autorisation est interdite."],
+      ['Objet', "Les présentes conditions régissent l'utilisation du site Hope Channel RDC et de ses services de diffusion en ligne."],
+      ['Propriété intellectuelle', "Les émissions, textes, logos et visuels sont la propriété de Hope Channel RDC ou de leurs auteurs. Toute reproduction sans autorisation est interdite."],
       ['Responsabilité', "Nous faisons notre possible pour assurer la disponibilité du direct, sans pouvoir garantir une diffusion ininterrompue."],
     ],
     en: [
-      ['Purpose', 'These terms govern the use of the Hope Chanel RDC website and its online streaming services.'],
-      ['Intellectual property', 'Shows, texts, logos and visuals belong to Hope Chanel RDC or their authors. Reproduction without permission is prohibited.'],
+      ['Purpose', 'These terms govern the use of the Hope Channel RDC website and its online streaming services.'],
+      ['Intellectual property', 'Shows, texts, logos and visuals belong to Hope Channel RDC or their authors. Reproduction without permission is prohibited.'],
       ['Liability', 'We do our best to keep the live stream available but cannot guarantee uninterrupted broadcast.'],
     ],
   },
   faq: {
     titleKey: 'legal.faqTitle',
     fr: [
-      ['La chaîne est-elle gratuite ?', 'Oui. Hope Chanel RDC est gratuite sur la TNT, le satellite, le web et l’application, grâce aux dons de nos téléspectateurs.'],
+      ['La chaîne est-elle gratuite ?', 'Oui. Hope Channel RDC est gratuite sur la TNT, le satellite, le web et l’application, grâce aux dons de nos téléspectateurs.'],
       ['Comment recevoir la chaîne ?', 'Consultez la page « Comment nous regarder » et la page « Réseau » pour les fréquences de votre ville.'],
       ['Mon don est-il sécurisé ?', 'Les paiements sont confiés à des prestataires agréés ; aucune donnée bancaire n’est stockée par la chaîne.'],
     ],
     en: [
-      ['Is the channel free?', 'Yes. Hope Chanel RDC is free on DTT, satellite, web and app, thanks to our viewers’ gifts.'],
+      ['Is the channel free?', 'Yes. Hope Channel RDC is free on DTT, satellite, web and app, thanks to our viewers’ gifts.'],
       ['How can I receive the channel?', 'See the “How to watch” and “Network” pages for frequencies in your city.'],
       ['Is my gift secure?', 'Payments are handled by licensed providers; no bank data is stored by the channel.'],
     ],

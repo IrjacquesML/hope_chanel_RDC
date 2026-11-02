@@ -1,4 +1,4 @@
-# Hope Chanel RDC — site web
+# Hope Channel RDC — site web
 
 Site responsive (React 18 + Vite + Tailwind CSS 3 + React Router), bilingue FR/EN.
 
@@ -154,7 +154,7 @@ vMix ──RTMP :1935──▶ MediaMTX ──▶ serveur du site (/hls/live/) �
 - **Direct** (par ordre de priorité) : `content.json > live.jetstreamEmbedUrl` (lecteur Jet-Stream intégré), `live.hlsUrl` (flux HLS, lu via hls.js chargé à la demande), `live.youtubeUrl` puis `live.youtubeChannelId` (YouTube).
 - **Paiements** : le formulaire `/dons` est une démonstration ; brancher un prestataire Mobile Money / carte **côté serveur** (aucune donnée de carte ne doit transiter par le front).
 - **Newsletter & contact** : brancher les `TODO` sur un service d'e-mail.
-- **Domaine** : remplacer `https://www.hopechanelrdc.org` (index.html, useSeo.js, sitemap, robots.txt) et ajouter `public/og-image.png` (1200×630).
+- **Domaine** : `https://hckinshasa-rdc.org` (index.html, siteSettings.js, sitemap, robots.txt) ; à changer à ces endroits en cas de nouveau domaine.
 - **Coordonnées** : adresse et téléphones sont des placeholders.
 - **SEO** : pour un référencement optimal d'une SPA, envisager un prérendu (ex. `vite-plugin-prerender`) ou une migration Next.js.
 - **Hébergement** : configurer la redirection de toutes les routes vers `index.html` (SPA).

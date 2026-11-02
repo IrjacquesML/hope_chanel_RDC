@@ -117,10 +117,10 @@ function RecoveryCodes({ user, onGenerated }) {
     }
   };
 
-  const text = codes && `Codes de secours — administration Hope Chanel RDC\nCompte : ${user.email}\nCréés le : ${formatDateTime(new Date().toISOString())}\n\n${codes.join('\n')}\n\nChaque code ne sert qu’une fois. Conservez-les en lieu sûr.\n`;
+  const text = codes && `Codes de secours — administration Hope Channel RDC\nCompte : ${user.email}\nCréés le : ${formatDateTime(new Date().toISOString())}\n\n${codes.join('\n')}\n\nChaque code ne sert qu’une fois. Conservez-les en lieu sûr.\n`;
   const download = () => {
     const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
-    const a = Object.assign(document.createElement('a'), { href: url, download: 'codes-de-secours-hope-chanel-rdc.txt' });
+    const a = Object.assign(document.createElement('a'), { href: url, download: 'codes-de-secours-hope-channel-rdc.txt' });
     a.click();
     URL.revokeObjectURL(url);
   };

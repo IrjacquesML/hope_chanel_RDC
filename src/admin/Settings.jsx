@@ -20,10 +20,9 @@ const TABS = [
     groups: [
       ['Identité du site', [
         { name: 'site.name', label: 'Nom du site / de la chaîne', required: true },
-        { name: 'site.url', label: 'Adresse du site', type: 'url', placeholder: 'https://www.hopechanelrdc.org', hint: 'Utilisée pour le référencement, le partage et le plan du site.' },
+        { name: 'site.url', label: 'Adresse du site', type: 'url', placeholder: 'https://hckinshasa-rdc.org', hint: 'Utilisée pour le référencement, le partage et le plan du site.' },
         { name: 'site.tagline', label: 'Slogan', type: 'i18n', hint: 'Affiché dans l’onglet du navigateur sur l’accueil : « Nom — Slogan ».' },
         { name: 'site.description', label: 'Description du site', type: 'i18nText', hint: 'Texte affiché par Google sous le nom du site (150 caractères environ).' },
-        { name: 'site.about', label: 'Présentation (pied de page)', type: 'i18nText', hint: 'Laissez vide pour garder le texte par défaut.' },
         { name: 'site.copyright', label: 'Mention de copyright', hint: 'Affiché : « © année Mention. Tous droits réservés. »' },
       ]],
       ['Logo et icônes', [
@@ -32,6 +31,22 @@ const TABS = [
         { name: 'site.ogImage', label: 'Image de partage (réseaux sociaux)', type: 'image', hint: 'Affichée quand un lien du site est partagé sur WhatsApp, Facebook, X… Format 1200 × 630 px.' },
       ]],
     ],
+  },
+  {
+    key: 'apropos',
+    label: 'À propos',
+    file: 'settings',
+    groups: [
+      ['Page « À propos » (menu À propos du site)', [
+        { name: 'aboutPage.title', label: 'Titre de la page', type: 'i18n', wide: true },
+        { name: 'aboutPage.intro', label: 'Phrase d’introduction', type: 'i18nText', hint: 'Affichée sous le titre, et par Google pour cette page.' },
+        { name: 'aboutPage.mission', label: 'Texte « Notre mission »', type: 'i18nText', hint: 'Le texte principal de présentation de la chaîne.' },
+      ]],
+      ['Pied de page', [
+        { name: 'site.about', label: 'Présentation (pied de page, rubrique « À propos »)', type: 'i18nText', hint: 'Court texte affiché en bas de toutes les pages. Laissez vide pour garder le texte par défaut.' },
+      ]],
+    ],
+    intro: 'Textes de présentation de la chaîne. Le texte anglais (EN) s’affiche quand le visiteur choisit l’anglais ; s’il est vide, le texte français est utilisé.',
   },
   {
     key: 'coordonnees',

@@ -281,7 +281,7 @@ function Dashboard({ data, go, user }) {
   return (
     <div>
       <h1 className="text-2xl font-bold">Bonjour, {user.name}</h1>
-      <p className="mt-1 text-sm text-gray-600">Bienvenue dans l’administration de Hope Chanel RDC · {ROLE_LABELS[user.role]}</p>
+      <p className="mt-1 text-sm text-gray-600">Bienvenue dans l’administration de Hope Channel RDC · {ROLE_LABELS[user.role]}</p>
       {user.recoveryCodesLeft === 0 && (
         <button type="button" onClick={() => go('account')} className="mt-6 block w-full rounded-xl bg-white p-4 text-left text-sm text-ink ring-1 ring-black/10 hover:ring-brand">
           🔑 Vous n’avez pas encore de codes de secours : sans eux, un mot de passe oublié ne peut pas être récupéré par vous-même. <strong className="text-brand">Créer mes codes →</strong>
@@ -340,7 +340,7 @@ export default function Admin() {
     meta.name = 'robots';
     meta.content = 'noindex, nofollow';
     document.head.appendChild(meta);
-    document.title = 'Administration | Hope Chanel RDC';
+    document.title = 'Administration | Hope Channel RDC';
     api.me().then((r) => setUser(r.authenticated ? r.user : false)).catch(() => setUser(false));
     return () => meta.remove();
   }, []);

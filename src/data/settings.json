@@ -1,23 +1,23 @@
 {
   "site": {
-    "name": "Hope Chanel RDC",
+    "name": "Hope Channel RDC",
     "tagline": {
       "fr": "La télévision de l'espoir",
       "en": "The television of hope"
     },
     "description": {
-      "fr": "Hope Chanel RDC, chaîne de télévision chrétienne basée à Kinshasa : direct, émissions, études bibliques, familles, santé et jeunesse.",
-      "en": "Hope Chanel RDC, a Christian television channel based in Kinshasa: live TV, shows, Bible studies, family, health and youth."
+      "fr": "Hope Channel RDC, chaîne de télévision chrétienne basée à Kinshasa : direct, émissions, études bibliques, familles, santé et jeunesse.",
+      "en": "Hope Channel RDC, a Christian television channel based in Kinshasa: live TV, shows, Bible studies, family, health and youth."
     },
     "about": {
       "fr": "",
       "en": ""
     },
-    "url": "https://www.hopechanelrdc.org",
+    "url": "https://hckinshasa-rdc.org",
     "logo": "/logo-hope-channel-rdc.webp",
     "favicon": "/favicon.png",
     "ogImage": "/og-image.png",
-    "copyright": "Hope Chanel RDC"
+    "copyright": "Hope Channel RDC"
   },
   "appearance": {
     "brand": "#0B3C7A",
@@ -47,5 +47,19 @@
     "googleSiteVerification": "",
     "bingSiteVerification": "",
     "facebookAppId": ""
+  },
+  "aboutPage": {
+    "title": {
+      "fr": "À propos de Hope Channel RDC",
+      "en": "About Hope Channel RDC"
+    },
+    "intro": {
+      "fr": "Une chaîne chrétienne congolaise au service de l'espoir, de la santé et de la famille.",
+      "en": "A Congolese Christian channel serving hope, health and family."
+    },
+    "mission": {
+      "fr": "Hope Channel RDC produit et diffuse des programmes qui nourrissent la foi, fortifient les familles et améliorent la qualité de vie. Nous voulons que chaque Congolais, en ville comme au village, ait accès gratuitement à un message d'espoir.",
+      "en": "Hope Channel RDC produces and broadcasts programmes that nourish faith, strengthen families and improve quality of life. We want every Congolese person, in town or village, to have free access to a message of hope."
+    }
   }
 }

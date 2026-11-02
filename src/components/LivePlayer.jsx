@@ -68,7 +68,7 @@ export default function LivePlayer({ sizes = '(min-width: 1024px) 66vw, 100vw', 
     <div className={`relative overflow-hidden bg-ink ${fill ? 'h-full w-full' : 'aspect-video rounded-2xl shadow-xl'}`}>
       {showPlayer ? (
         source.type === 'embed' ? (
-          <iframe title="Hope Chanel RDC — direct" src={source.src} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen className="h-full w-full border-0" />
+          <iframe title="Hope Channel RDC — direct" src={source.src} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen className="h-full w-full border-0" />
         ) : (
           <HlsPlayer src={source.src} fill={fill} />
         )

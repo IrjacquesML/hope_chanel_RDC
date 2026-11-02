@@ -1,4 +1,4 @@
-// Serveur Hope Chanel RDC : API d'administration + (en production) service du site compilé.
+// Serveur Hope Channel RDC : API d'administration + (en production) service du site compilé.
 import express from 'express';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
@@ -175,7 +175,8 @@ function validate(name, d) {
   if (name === 'settings') {
     for (const k of ['site', 'appearance', 'announcement', 'maintenance', 'integrations']) if (!isObj(d[k])) return `Section « ${k} » manquante`;
     if (!String(d.site.name || '').trim()) return 'Le nom du site est obligatoire';
-    if (!/^https?:\/\/[^\s/]+/.test(d.site.url || '')) return 'Adresse du site invalide (ex. : https://www.hopechanelrdc.org)';
+    if (d.aboutPage !== undefined && !isObj(d.aboutPage)) return 'Section « aboutPage » invalide';
+    if (!/^https?:\/\/[^\s/]+/.test(d.site.url || '')) return 'Adresse du site invalide (ex. : https://hckinshasa-rdc.org)';
     for (const [k, v] of Object.entries(d.appearance)) if (!/^#[\da-fA-F]{6}$/.test(v)) return `Couleur invalide : « ${k} »`;
     if (d.integrations.googleAnalyticsId && !/^G-[A-Z0-9]{4,}$/.test(d.integrations.googleAnalyticsId)) return 'Identifiant Google Analytics invalide (format G-XXXXXXX)';
     if (d.announcement.link && !/^(https:\/\/|\/)/.test(d.announcement.link)) return 'Le lien de l’annonce doit commencer par https:// ou /';
@@ -518,7 +519,7 @@ app.get('/api/stats/export.csv', requireAuth, (req, res) => {
   for (const d of r.daily) lines.push([d.day, d.visitors, d.pageviews, d.plays, Math.round(d.watchSeconds / 60)].join(';'));
   res
     .type('text/csv; charset=utf-8')
-    .set('Content-Disposition', `attachment; filename="hope-chanel-stats-${r.from}_${r.to}.csv"`)
+    .set('Content-Disposition', `attachment; filename="hope-channel-stats-${r.from}_${r.to}.csv"`)
     .send('﻿' + lines.join('\r\n'));
 });
 
@@ -576,6 +577,6 @@ if (!privateData.streaming.destinations.selfhost.key) {
 }
 
 app.listen(PORT, () => {
-  console.log(`Serveur Hope Chanel RDC : http://localhost:${PORT}`);
+  console.log(`Serveur Hope Channel RDC : http://localhost:${PORT}`);
   startMediamtx({ root: ROOT, port: PORT });
 });
