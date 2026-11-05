@@ -320,5 +320,8 @@ export function createSocial({ dbDir, uploadDir, requireRole, getContentSocial, 
     }
   });
 
-  return { router, schedule, syncAll };
+  /** Titre d'une vidéo YouTube synchronisée (rapports d'audience). */
+  const videoTitle = (videoId) => state.items.find((i) => i.network === 'youtube' && i.videoId === videoId)?.title || '';
+
+  return { router, schedule, syncAll, videoTitle };
 }

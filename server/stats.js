@@ -88,14 +88,34 @@ export function createStats(rootDir) {
     return true;
   }
 
-  /** Agrégats pour le tableau de bord de l'admin, sur les `days` derniers jours. */
-  function report(days) {
-    const n = [7, 30, 90, 365].includes(days) ? days : 30;
+  const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const isDay = (v) => typeof v === 'string' && DAY_RE.test(v) && !Number.isNaN(Date.parse(v));
+  const shift = (day, k) => new Date(Date.parse(day) + k * 86_400_000).toISOString().slice(0, 10);
+
+  /**
+   * Agrégats pour le tableau de bord et les rapports.
+   * `days` : les N derniers jours (7, 30, 90, 365) ; ou bien `from` / `to` (AAAA-MM-JJ) pour un intervalle libre.
+   * `limit` : nombre de contenus / pages renvoyés (plus élevé pour les rapports PDF).
+   */
+  function report({ days, from: f, to: t, limit = 50 } = {}) {
     const today = localParts(Date.now()).day;
-    const dayMinus = (k) => new Date(Date.parse(today) - k * 86_400_000).toISOString().slice(0, 10);
-    const from = dayMinus(n - 1);
+    let from;
+    let to;
+    if (isDay(f) || isDay(t)) {
+      to = isDay(t) && t < today ? t : today;
+      from = isDay(f) ? f : shift(to, -29);
+      if (from > to) [from, to] = [to, from];
+      if (from < shift(to, -(RETENTION_DAYS - 1))) from = shift(to, -(RETENTION_DAYS - 1));
+    } else {
+      const n = [7, 30, 90, 365].includes(days) ? days : 30;
+      to = today;
+      from = shift(today, -(n - 1));
+    }
+    const n = Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000) + 1;
+    const dayMinus = (k) => shift(to, -k);
     const prevFrom = dayMinus(2 * n - 1);
     const prevTo = dayMinus(n);
+    const top = Math.max(1, Math.min(200, limit));
 
     const totalsSql = `
       SELECT
@@ -117,7 +137,7 @@ export function createStats(rootDir) {
         COUNT(DISTINCT visitor) AS visitors,
         SUM(type = 'play') AS plays,
         SUM(seconds) AS watchSeconds
-      FROM events WHERE day BETWEEN ? AND ? GROUP BY day`).all(from, today);
+      FROM events WHERE day BETWEEN ? AND ? GROUP BY day`).all(from, to);
     const byDay = new Map(rows.map((r) => [r.day, r]));
     const daily = Array.from({ length: n }, (_, i) => {
       const day = dayMinus(n - 1 - i);
@@ -131,23 +151,23 @@ export function createStats(rootDir) {
         SUM(seconds) AS watchSeconds,
         COUNT(DISTINCT day || visitor) AS viewers
       FROM events WHERE day BETWEEN ? AND ? AND type IN ('play', 'watch')
-      GROUP BY target ORDER BY watchSeconds DESC, plays DESC LIMIT 50`).all(from, today);
+      GROUP BY target ORDER BY watchSeconds DESC, plays DESC LIMIT ?`).all(from, to, top);
 
     const pages = db.prepare(`
       SELECT path, COUNT(*) AS views, COUNT(DISTINCT day || visitor) AS visitors
       FROM events WHERE day BETWEEN ? AND ? AND type = 'pageview'
-      GROUP BY path ORDER BY views DESC LIMIT 15`).all(from, today);
+      GROUP BY path ORDER BY views DESC LIMIT ?`).all(from, to, Math.min(top, 15 * Math.ceil(top / 50)));
 
     const hourRows = db.prepare(`
       SELECT hour, SUM(seconds) AS watchSeconds FROM events
-      WHERE day BETWEEN ? AND ? AND type = 'watch' AND target = 'live' GROUP BY hour`).all(from, today);
+      WHERE day BETWEEN ? AND ? AND type = 'watch' AND target = 'live' GROUP BY hour`).all(from, to);
     const hourly = Array.from({ length: 24 }, (_, h) => ({ hour: h, watchSeconds: hourRows.find((r) => r.hour === h)?.watchSeconds || 0 }));
 
     const split = (col, extra = '') =>
       db.prepare(`
         SELECT ${col} AS key, COUNT(DISTINCT day || visitor) AS visitors FROM events
         WHERE day BETWEEN ? AND ? AND ${col} IS NOT NULL ${extra}
-        GROUP BY ${col} ORDER BY visitors DESC LIMIT 10`).all(from, today);
+        GROUP BY ${col} ORDER BY visitors DESC LIMIT 10`).all(from, to);
 
     const liveNow = db.prepare(`
       SELECT COUNT(DISTINCT visitor) AS n FROM events
@@ -156,8 +176,10 @@ export function createStats(rootDir) {
     return {
       days: n,
       from,
-      to: today,
-      totals: totals(from, today),
+      to,
+      previousFrom: prevFrom,
+      previousTo: prevTo,
+      totals: totals(from, to),
       previous: totals(prevFrom, prevTo),
       daily,
       content,

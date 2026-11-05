@@ -27,7 +27,21 @@ export const api = {
   save: (file, data) => request(`/api/data/${file}`, { method: 'PUT', body: data }),
   upload: (dataUrl) => request('/api/upload', { method: 'POST', body: { dataUrl } }),
   backups: () => request('/api/backups'),
-  stats: (days) => request(`/api/stats?days=${days}`, { cache: 'no-store' }),
+  stats: (query) => request(`/api/stats?${query}`, { cache: 'no-store' }),
+  reportsConfig: () => request('/api/reports/config', { cache: 'no-store' }),
+  saveReportsConfig: (body) => request('/api/reports/config', { method: 'PUT', body }),
+  /** Rapport d'audience en PDF : renvoie le fichier (Blob) et son nom. */
+  async reportPdf(body) {
+    const res = await fetch('/api/stats/report.pdf', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      const err = new Error(data?.error || `Erreur ${res.status}`);
+      err.status = res.status;
+      throw err;
+    }
+    const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '')?.[1] || 'rapport.pdf';
+    return { blob: await res.blob(), name };
+  },
   restore: (name) => request(`/api/backups/${encodeURIComponent(name)}/restore`, { method: 'POST' }),
   privateSettings: () => request('/api/private', { cache: 'no-store' }),
   saveStreaming: (streaming) => request('/api/private/streaming', { method: 'PUT', body: streaming }),
@@ -57,6 +71,25 @@ export const api = {
   socialStatus: (key, status) => request(`/api/social/items/${encodeURIComponent(key)}`, { method: 'PATCH', body: { status } }),
   socialToArticle: (key) => request(`/api/social/items/${encodeURIComponent(key)}/article`, { method: 'POST' }),
 };
+
+/** Convertit une image (fichier ou adresse, tout format lisible par le navigateur) en PNG, pour le PDF. */
+export function imageToPng(source, maxSize = 1200) {
+  return new Promise((resolve, reject) => {
+    const url = typeof source === 'string' ? source : URL.createObjectURL(source);
+    const image = new Image();
+    image.onload = () => {
+      const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+      canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+      if (typeof source !== 'string') URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    image.onerror = () => reject(new Error('Image illisible'));
+    image.src = url;
+  });
+}
 
 /** Redimensionne une image (1600 px max.) et la convertit en WebP avant envoi. */
 export function imageToWebp(file, maxSize = 1600) {

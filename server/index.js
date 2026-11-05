@@ -10,6 +10,7 @@ import { buildSitemap } from '../scripts/sitemap-lib.mjs';
 import { DEFAULT_RUBRIQUES, articleSlug, isPublished, kinshasaToday, plainText, publicArticles } from '../src/articles.js';
 import { createSocial } from './social.js';
 import { createStats } from './stats.js';
+import { buildStatsPdf, imageBuffer } from './report.js';
 import { createAuth } from './auth.js';
 import { MEDIAMTX_HLS, pathReady, relayState, startMediamtx } from './mediamtx.js';
 
@@ -603,10 +604,92 @@ app.post('/api/track', express.text({ type: 'text/plain', limit: '4kb' }), (req,
   res.status(204).end();
 });
 
-app.get('/api/stats', requireAuth, (req, res) => res.json(stats.report(Number(req.query.days))));
+/** Période demandée : ?days=30 ou ?from=AAAA-MM-JJ&to=AAAA-MM-JJ */
+const statsPeriod = (q) => ({ days: Number(q.days), from: q.from, to: q.to });
+
+app.get('/api/stats', requireAuth, (req, res) => res.json(stats.report(statsPeriod(req.query))));
+
+/* ---------- Rapports PDF : signataire (directeur), conservé hors des réglages publics ---------- */
+const REPORTS_FILE = path.join(DB_DIR, 'reports.json');
+const DEFAULT_REPORTS = { signerName: '', signerTitle: 'Directeur', signerCity: 'Kinshasa', signature: '' };
+let reportsConfig = { ...DEFAULT_REPORTS };
+try {
+  reportsConfig = { ...DEFAULT_REPORTS, ...JSON.parse(readFileSync(REPORTS_FILE, 'utf8')) };
+} catch {
+  /* première utilisation */
+}
+const signerField = (v, max) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+
+// La signature scannée n'est renvoyée qu'aux administrateurs (aperçu) ; les autres rôles savent seulement qu'elle existe.
+app.get('/api/reports/config', requireAuth, (req, res) => {
+  const { signature, ...rest } = reportsConfig;
+  res.set('Cache-Control', 'no-store').json({ ...rest, hasSignature: Boolean(signature), signature: req.user.role === 'admin' ? signature : undefined });
+});
+
+app.put('/api/reports/config', requireRole('admin'), async (req, res, next) => {
+  const b = isObj(req.body) ? req.body : {};
+  const next_ = {
+    signerName: signerField(b.signerName, 120),
+    signerTitle: signerField(b.signerTitle, 120) || 'Directeur',
+    signerCity: signerField(b.signerCity, 80) || 'Kinshasa',
+    signature: reportsConfig.signature,
+  };
+  if (b.signature === null || b.signature === '') next_.signature = '';
+  else if (typeof b.signature === 'string') {
+    if (!imageBuffer(b.signature)) return res.status(400).json({ error: 'Signature : image PNG ou JPEG attendue (4 Mo max.)' });
+    next_.signature = b.signature;
+  }
+  try {
+    const tmp = REPORTS_FILE + '.tmp';
+    await fs.writeFile(tmp, JSON.stringify(next_, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 });
+    await fs.rename(tmp, REPORTS_FILE);
+    reportsConfig = next_;
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/** Rapport PDF : en-tête avec logo, synthèse, visites, visionnage, signature du directeur. */
+app.post('/api/stats/report.pdf', requireAuth, async (req, res, next) => {
+  try {
+    const b = isObj(req.body) ? req.body : {};
+    const kind = ['full', 'views', 'visits'].includes(b.kind) ? b.kind : 'full';
+    const o = isObj(b.signer) ? b.signer : {};
+    const signer = {
+      name: signerField(o.name ?? reportsConfig.signerName, 120),
+      title: signerField(o.title ?? reportsConfig.signerTitle, 120) || 'Directeur',
+      city: signerField(o.city ?? reportsConfig.signerCity, 80) || 'Kinshasa',
+    };
+    // La signature enregistrée n'est apposée que pour le signataire enregistré (jamais sous un autre nom).
+    const useSignature = b.withSignature !== false && reportsConfig.signature && signer.name === reportsConfig.signerName;
+    const [{ shows, episodes }, settings, content] = await Promise.all([readData('shows'), readData('settings'), readData('content')]);
+    const r = stats.report({ ...statsPeriod(b), limit: 200 });
+    const pdf = await buildStatsPdf(r, {
+      kind,
+      settings,
+      contact: content.contact,
+      shows,
+      episodes,
+      videoTitle: social.videoTitle,
+      signer,
+      logo: imageBuffer(b.logo),
+      signature: useSignature ? imageBuffer(reportsConfig.signature) : null,
+      author: req.user.name || req.user.email || '',
+    });
+    const kindName = { full: 'complet', views: 'visionnage', visits: 'visites' }[kind];
+    res
+      .type('application/pdf')
+      .set('Content-Disposition', `attachment; filename="rapport-${kindName}-hope-channel-rdc-${r.from}_${r.to}.pdf"`)
+      .set('Cache-Control', 'no-store')
+      .send(pdf);
+  } catch (e) {
+    next(e);
+  }
+});
 
 app.get('/api/stats/export.csv', requireAuth, (req, res) => {
-  const r = stats.report(Number(req.query.days));
+  const r = stats.report(statsPeriod(req.query));
   const lines = ['jour;visiteurs;pages vues;lancements de lecture;minutes regardees'];
   for (const d of r.daily) lines.push([d.day, d.visitors, d.pageviews, d.plays, Math.round(d.watchSeconds / 60)].join(';'));
   res

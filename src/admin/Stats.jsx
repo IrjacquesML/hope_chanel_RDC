@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api } from './api';
+import ReportPanel from './ReportPanel';
 
 /* ---------- Formats ---------- */
 const nf = new Intl.NumberFormat('fr-FR');
@@ -167,14 +168,15 @@ const PAGE_NAMES = {
 };
 
 /* ---------- Page ---------- */
-export default function Stats({ data }) {
+export default function Stats({ data, user }) {
   const [days, setDays] = useState(30);
+  const [reportOpen, setReportOpen] = useState(false);
   const [report, setReport] = useState(null);
   const [error, setError] = useState('');
   const [metric, setMetric] = useState('visitors');
 
   const load = useCallback(() => {
-    api.stats(days).then((r) => { setReport(r); setError(''); }).catch((e) => setError(e.message));
+    api.stats(`days=${days}`).then((r) => { setReport(r); setError(''); }).catch((e) => setError(e.message));
   }, [days]);
   useEffect(() => {
     load();
@@ -185,6 +187,7 @@ export default function Stats({ data }) {
   const { shows, episodes } = data.shows;
   const contentName = (target) => {
     if (target === 'live') return { title: 'Direct', sub: 'Page Regarder' };
+    if (target.startsWith('yt:')) return { title: 'Vidéo YouTube', sub: `Sur nos réseaux · ${target.slice(3)}` };
     const ep = episodes.find((e) => e.id === target);
     if (!ep) return { title: target, sub: 'Épisode supprimé' };
     return { title: ep.title.fr, sub: shows.find((s) => s.slug === ep.show)?.title };
@@ -223,8 +226,13 @@ export default function Stats({ data }) {
             ))}
           </div>
           <a href={`/api/stats/export.csv?days=${days}`} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-brand ring-1 ring-black/10 hover:bg-mist">⬇ Exporter (Excel/CSV)</a>
+          <button type="button" aria-expanded={reportOpen} onClick={() => setReportOpen((v) => !v)} className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">📄 Rapport PDF</button>
         </div>
       </div>
+
+      {reportOpen && (
+        <ReportPanel initialFrom={report.from} initialTo={report.to} user={user} logo={data.settings?.site?.logo} onClose={() => setReportOpen(false)} />
+      )}
 
       <div className="flex items-center gap-3 rounded-xl bg-white p-4 ring-1 ring-black/5">
         <span className={`h-3 w-3 rounded-full ${report.liveNow ? 'animate-pulse bg-red-600' : 'bg-gray-300'}`} aria-hidden="true" />

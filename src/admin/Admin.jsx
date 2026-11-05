@@ -473,7 +473,7 @@ export default function Admin() {
   else if (current.custom === 'settings') body = <SettingsEditor data={data} user={user} onSave={saveFile} notify={notify} onAuthLost={onAuthLost} />;
   else if (current.custom === 'account') body = <Account user={user} onUserChange={setUser} notify={notify} onAuthLost={onAuthLost} />;
   else if (current.custom === 'users') body = <Users me={user} notify={notify} onAuthLost={onAuthLost} />;
-  else if (current.custom === 'stats') body = <Stats data={data} />;
+  else if (current.custom === 'stats') body = <Stats data={data} user={user} />;
   else if (current.custom === 'social') body = <SocialSync user={user} socialLinks={data.content.social} notify={notify} onAuthLost={onAuthLost} onArticleCreated={load} />;
   else if (current.custom === 'backups') body = <Backups onRestored={load} notify={notify} />;
   else {
