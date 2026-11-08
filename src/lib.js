@@ -68,6 +68,12 @@ export const getShow = (slug) => shows.find((s) => s.slug === slug);
 
 export const getSortedEpisodes = () => [...episodes].sort((a, b) => b.date.localeCompare(a.date));
 
+/** Un épisode (ou une émission) a-t-il une vidéo à lire ? */
+export const hasVideo = (item) => Boolean(item.video || item.youtubeId);
+
+/** L'émission a-t-elle quelque chose à lire dès l'ouverture de sa page ? */
+export const showHasVideo = (show) => hasVideo(show) || episodes.some((e) => e.show === show.slug && hasVideo(e));
+
 export function categoryLabel(id, lang) {
   const c = categories.find((x) => x.id === id);
   return c ? c.label[lang] || c.label.fr : id;
