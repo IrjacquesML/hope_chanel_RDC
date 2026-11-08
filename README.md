@@ -81,6 +81,7 @@ Fonctionnement :
 - Les modifications sont écrites dans `src/data/*.json` ; le site public les charge via `/api/data` à chaque visite (actualisez la page pour les voir).
 - Une sauvegarde est créée dans `backups/` avant chaque écriture (30 dernières par fichier).
 - Les images téléversées sont redimensionnées (1600 px) et converties en WebP dans le navigateur, puis stockées dans `uploads/`.
+- Les vidéos des émissions et des épisodes (MP4 H.264 ou WebM, 2 Go max.) sont envoyées telles quelles dans `uploads/videos/`, sans conversion, et lues par le lecteur du site.
 - Sécurité : session par cookie `HttpOnly` / `SameSite=Strict` (8 h), blocage 15 min après 5 échecs de connexion par adresse IP (10 par compte), validation des données côté serveur (slugs, références entre émissions, épisodes et programme).
 - Les identifiants (slug d'émission, id d'épisode/catégorie) ne sont pas modifiables après création, pour ne pas casser les liens ; une émission utilisée par des épisodes ou le programme ne peut pas être supprimée.
 

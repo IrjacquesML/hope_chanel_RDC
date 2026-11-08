@@ -26,6 +26,26 @@ export const api = {
   load: () => request('/api/data', { cache: 'no-store' }),
   save: (file, data) => request(`/api/data/${file}`, { method: 'PUT', body: data }),
   upload: (dataUrl) => request('/api/upload', { method: 'POST', body: { dataUrl } }),
+  /** Envoie une vidéo telle quelle ; onProgress reçoit le pourcentage envoyé. */
+  uploadVideo: (file, onProgress) =>
+    new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload/video');
+      xhr.setRequestHeader('Content-Type', file.type);
+      xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(Math.round((e.loaded / e.total) * 100));
+      xhr.onload = () => {
+        let data = null;
+        try {
+          data = JSON.parse(xhr.responseText);
+        } catch {
+          /* réponse vide ou page d'erreur du proxy */
+        }
+        if (xhr.status >= 200 && xhr.status < 300 && data?.url) return resolve(data);
+        reject(new Error(data?.error || (xhr.status === 413 ? 'Vidéo trop lourde pour le serveur' : `Erreur ${xhr.status}`)));
+      };
+      xhr.onerror = () => reject(new Error('Envoi interrompu : vérifiez la connexion et réessayez'));
+      xhr.send(file);
+    }),
   backups: () => request('/api/backups'),
   stats: (query) => request(`/api/stats?${query}`, { cache: 'no-store' }),
   reportsConfig: () => request('/api/reports/config', { cache: 'no-store' }),

@@ -8,6 +8,7 @@ import { useLang } from '../i18n/LanguageContext';
 import { useSeo } from '../hooks/useSeo';
 import NotFound from './NotFound';
 import TrackedYouTube from '../components/TrackedYouTube';
+import VideoPlayer from '../components/VideoPlayer';
 
 export default function ShowDetail() {
   const { slug } = useParams();
@@ -18,7 +19,7 @@ export default function ShowDetail() {
   if (!show) return <NotFound />;
 
   const eps = getSortedEpisodes().filter((e) => e.show === slug);
-  const playing = eps.find((e) => `#${e.id}` === hash && e.youtubeId);
+  const playing = eps.find((e) => `#${e.id}` === hash && (e.video || e.youtubeId));
 
   return (
     <>
@@ -41,16 +42,29 @@ export default function ShowDetail() {
         </div>
       </section>
 
+      {show.video && (
+        <section aria-labelledby="presentation" className="container-page pt-14">
+          <SectionTitle id="presentation" title={t('shows.presentation')} />
+          <div className="aspect-video max-w-4xl overflow-hidden rounded-2xl bg-ink shadow-xl">
+            <VideoPlayer src={show.video} poster={show.image} title={show.title} target={show.slug} />
+          </div>
+        </section>
+      )}
+
       <section aria-labelledby="eps" className="container-page py-14">
         <SectionTitle id="eps" title={`${t('shows.episodesOf')} (${eps.length})`} />
         {playing && (
           <div className="mb-10">
             <div className="aspect-video overflow-hidden rounded-2xl bg-ink shadow-xl">
-              <TrackedYouTube
-                title={tr(playing.title)}
-                src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(playing.youtubeId)}?autoplay=1`}
-                target={playing.id}
-              />
+              {playing.video ? (
+                <VideoPlayer src={playing.video} poster={playing.image} title={tr(playing.title)} target={playing.id} autoPlay />
+              ) : (
+                <TrackedYouTube
+                  title={tr(playing.title)}
+                  src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(playing.youtubeId)}?autoplay=1`}
+                  target={playing.id}
+                />
+              )}
             </div>
             <h3 className="mt-4 text-xl font-bold">{tr(playing.title)}</h3>
             <p className="mt-1 text-gray-600">{tr(playing.summary)}</p>

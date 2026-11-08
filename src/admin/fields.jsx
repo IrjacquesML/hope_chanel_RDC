@@ -67,6 +67,46 @@ function ImageInput({ id, value, onChange }) {
   );
 }
 
+const MAX_VIDEO_GB = 2;
+
+/** Vidéo téléversée sur le site : envoi avec progression, aperçu, remplacement ou retrait. */
+function VideoInput({ id, value, onChange }) {
+  const [progress, setProgress] = useState(null);
+  const [err, setErr] = useState('');
+  const busy = progress !== null;
+  const onFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setErr('');
+    if (!['video/mp4', 'video/webm'].includes(file.type)) return setErr('Format non pris en charge : choisissez un fichier MP4 ou WebM.');
+    if (file.size > MAX_VIDEO_GB * 1024 ** 3) return setErr(`Vidéo trop lourde (${MAX_VIDEO_GB} Go max.).`);
+    setProgress(0);
+    try {
+      const { url } = await api.uploadVideo(file, setProgress);
+      onChange(url);
+    } catch (ex) {
+      setErr(ex.message);
+    } finally {
+      setProgress(null);
+    }
+  };
+  return (
+    <div className="space-y-2">
+      {value && <video key={value} src={value} controls preload="metadata" className="aspect-video w-full max-w-md rounded-lg bg-black" />}
+      <div className="flex flex-wrap items-center gap-2">
+        <label className={`inline-flex items-center gap-2 rounded-lg bg-mist px-3 py-1.5 text-xs font-semibold text-brand ${busy ? 'opacity-70' : 'cursor-pointer hover:bg-gray-200'}`}>
+          {busy ? `Envoi… ${progress} %` : value ? '⬆ Remplacer la vidéo' : '⬆ Téléverser une vidéo'}
+          <input id={id} type="file" accept="video/mp4,video/webm" className="sr-only" onChange={onFile} disabled={busy} />
+        </label>
+        {value && !busy && <button type="button" onClick={() => onChange('')} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50">Retirer la vidéo</button>}
+      </div>
+      {busy && <progress value={progress} max={100} className="h-2 w-full max-w-md accent-brand" aria-label="Progression de l’envoi" />}
+      {err && <p className="text-xs text-red-700">{err}</p>}
+    </div>
+  );
+}
+
 function ListInput({ id, value = [], onChange }) {
   return (
     <div className="space-y-2">
@@ -240,7 +280,7 @@ function SecretInput({ id, value, onChange, placeholder }) {
 
 /**
  * Champ générique piloté par une définition :
- * { name, label, type: text|textarea|number|date|time|url|email|checkbox|select|i18n|i18nText|image|list|links|richtext|color|secret, options, required, hint, wide, immutable }
+ * { name, label, type: text|textarea|number|date|time|url|email|checkbox|select|i18n|i18nText|image|video|list|links|richtext|color|secret, options, required, hint, wide, immutable }
  */
 export function Field({ def, value, onChange, error, locked }) {
   const id = useId();
@@ -300,6 +340,9 @@ export function Field({ def, value, onChange, error, locked }) {
     case 'image':
       control = <ImageInput id={id} value={value} onChange={onChange} />;
       break;
+    case 'video':
+      control = <VideoInput id={id} value={value} onChange={onChange} />;
+      break;
     case 'list':
       control = <ListInput id={id} value={value} onChange={onChange} />;
       break;
@@ -320,7 +363,7 @@ export function Field({ def, value, onChange, error, locked }) {
   }
 
   return (
-    <Wrapper id={id} label={def.label} hint={disabled ? 'Non modifiable après création (utilisé dans les liens).' : def.hint} required={def.required} error={error} wide={def.wide || ['textarea', 'i18nText', 'image', 'list', 'links', 'richtext'].includes(def.type)}>
+    <Wrapper id={id} label={def.label} hint={disabled ? 'Non modifiable après création (utilisé dans les liens).' : def.hint} required={def.required} error={error} wide={def.wide || ['textarea', 'i18nText', 'image', 'video', 'list', 'links', 'richtext'].includes(def.type)}>
       {control}
     </Wrapper>
   );

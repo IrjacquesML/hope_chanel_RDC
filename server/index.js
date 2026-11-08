@@ -12,6 +12,7 @@ import { createSocial } from './social.js';
 import { createStats } from './stats.js';
 import { buildStatsPdf, imageBuffer } from './report.js';
 import { createAuth } from './auth.js';
+import { VIDEO_URL, createVideoUpload } from './videos.js';
 import { MEDIAMTX_HLS, pathReady, relayState, startMediamtx } from './mediamtx.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -143,6 +144,7 @@ function validate(name, d) {
       if (slugs.has(s.slug)) return `Slug en double : « ${s.slug} »`;
       if (!s.title) return 'Chaque émission doit avoir un titre';
       if (!catIds.has(s.category)) return `Catégorie inconnue pour « ${s.title} »`;
+      if (s.video && !VIDEO_URL.test(s.video)) return `Vidéo invalide pour « ${s.title} »`;
       slugs.add(s.slug);
     }
     const ids = new Set();
@@ -150,6 +152,7 @@ function validate(name, d) {
       if (!e.id || ids.has(e.id)) return `Identifiant d'épisode manquant ou en double : « ${e.id} »`;
       if (!slugs.has(e.show)) return `L'épisode « ${e.id} » référence une émission inexistante`;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(e.date || '')) return `Date invalide pour l'épisode « ${e.id} »`;
+      if (e.video && !VIDEO_URL.test(e.video)) return `Vidéo invalide pour l'épisode « ${e.id} »`;
       ids.add(e.id);
     }
   }
@@ -564,6 +567,8 @@ app.post('/api/upload', requireAuth, async (req, res, next) => {
   }
 });
 
+app.post('/api/upload/video', requireRole('admin', 'editor'), createVideoUpload({ dir: path.join(UPLOAD_DIR, 'videos') }));
+
 app.get('/api/backups', requireRole('admin'), async (_req, res) => {
   const files = (await fs.readdir(BACKUP_DIR)).filter((f) => f.endsWith('.json')).sort().reverse();
   res.json(files);
@@ -751,7 +756,9 @@ if (!privateData.streaming.destinations.selfhost.key) {
   await writePrivate({ streaming });
 }
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Serveur Hope Channel RDC : http://localhost:${PORT}`);
   startMediamtx({ root: ROOT, port: PORT });
 });
+// Node coupe par défaut toute requête reçue en plus de 5 min : trop court pour envoyer une vidéo de 2 Go sur une connexion lente.
+server.requestTimeout = 6 * 3600_000;

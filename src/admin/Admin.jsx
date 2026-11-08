@@ -61,16 +61,17 @@ function buildSections(data) {
           { name: 'host', label: 'Présentateur·rice' },
           { name: 'highlight', label: 'Temps fort de la semaine', type: 'checkbox' },
           { name: 'image', label: 'Image (16:9)', type: 'image', required: true },
+          { name: 'video', label: 'Vidéo de présentation', type: 'video', hint: 'Facultatif. MP4 (H.264) ou WebM, 2 Go max. Affichée sur la page de l’émission ; pensez à enregistrer après l’envoi.' },
           { name: 'tagline', label: 'Accroche', type: 'i18n', required: true },
           { name: 'description', label: 'Description', type: 'i18nText', required: true },
         ],
-        makeNew: () => ({ slug: '', title: '', category: catOptions[0]?.value, highlight: false, image: '', host: '', tagline: { fr: '', en: '' }, description: { fr: '', en: '' } }),
+        makeNew: () => ({ slug: '', title: '', category: catOptions[0]?.value, highlight: false, image: '', video: '', host: '', tagline: { fr: '', en: '' }, description: { fr: '', en: '' } }),
         beforeSave: (item, isNew) => (isNew && !item.slug ? { ...item, slug: slugify(item.title) } : item),
         summary: (s) => ({
           title: s.title,
           subtitle: `${catOptions.find((c) => c.value === s.category)?.label || s.category} · ${showsFile.episodes.filter((e) => e.show === s.slug).length} épisode(s)`,
           image: s.image,
-          badges: [s.highlight && 'Temps fort'].filter(Boolean),
+          badges: [s.highlight && 'Temps fort', s.video && 'Vidéo'].filter(Boolean),
         }),
         canDelete: (s) => {
           const n = showsFile.episodes.filter((e) => e.show === s.slug).length;
@@ -86,7 +87,7 @@ function buildSections(data) {
       key: 'episodes',
       editor: {
         title: 'Épisodes',
-        description: 'Les 8 plus récents apparaissent dans « Derniers épisodes » sur l’accueil. Avec un identifiant YouTube, l’épisode est lisible sur la page de l’émission.',
+        description: 'Les 8 plus récents apparaissent dans « Derniers épisodes » sur l’accueil. Avec une vidéo téléversée ou un identifiant YouTube, l’épisode est lisible sur la page de l’émission.',
         fields: [
           { name: 'show', label: 'Émission', type: 'select', options: showOptions, required: true },
           { name: 'id', label: 'Identifiant', immutable: true, hint: 'Généré automatiquement si vide.' },
@@ -94,14 +95,15 @@ function buildSections(data) {
           { name: 'summary', label: 'Résumé', type: 'i18nText', required: true },
           { name: 'date', label: 'Date de diffusion', type: 'date', required: true },
           { name: 'duration', label: 'Durée', placeholder: '28:30', required: true, pattern: /^(\d{1,2}:)?\d{1,2}:\d{2}$/, patternMessage: 'Format mm:ss ou h:mm:ss' },
+          { name: 'video', label: 'Vidéo de l’épisode', type: 'video', hint: 'MP4 (H.264) ou WebM, 2 Go max. Prioritaire sur YouTube si les deux sont renseignés ; pensez à enregistrer après l’envoi.' },
           { name: 'youtubeId', label: 'Identifiant vidéo YouTube', hint: 'La partie après « v= » dans l’URL YouTube.' },
           { name: 'image', label: 'Vignette (16:9)', type: 'image', required: true },
         ],
-        makeNew: () => ({ id: '', show: showOptions[0]?.value, title: { fr: '', en: '' }, summary: { fr: '', en: '' }, duration: '', date: today(), image: '', youtubeId: '' }),
+        makeNew: () => ({ id: '', show: showOptions[0]?.value, title: { fr: '', en: '' }, summary: { fr: '', en: '' }, duration: '', date: today(), image: '', video: '', youtubeId: '' }),
         beforeSave: (item, isNew) => (isNew && !item.id ? { ...item, id: uid(item.show.slice(0, 3)) } : item),
         sortItems: (a, b) => b.date.localeCompare(a.date),
         filters: [{ label: 'Émission', options: showOptions, test: (e, v) => e.show === v }],
-        summary: (e) => ({ title: fr(e.title), subtitle: `${showTitle(e.show)} · ${formatDate(e.date, 'fr')} · ${e.duration}`, image: e.image, badges: e.youtubeId ? ['Vidéo'] : [] }),
+        summary: (e) => ({ title: fr(e.title), subtitle: `${showTitle(e.show)} · ${formatDate(e.date, 'fr')} · ${e.duration}`, image: e.image, badges: e.video || e.youtubeId ? ['Vidéo'] : [] }),
       },
     },
     categories: {

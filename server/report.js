@@ -294,7 +294,8 @@ export function buildStatsPdf(r, { kind, settings, contact = {}, shows = [], epi
     if (target === 'live') return ['Direct (page Regarder)', 'Direct'];
     if (target.startsWith('yt:')) return [videoTitle(target.slice(3)) || `Vidéo YouTube ${target.slice(3)}`, 'YouTube (sur nos réseaux)'];
     const ep = episodes.find((e) => e.id === target);
-    return ep ? [trText(ep.title), trText(showTitle(ep.show))] : [target, 'Épisode supprimé'];
+    if (ep) return [trText(ep.title), trText(showTitle(ep.show))];
+    return showTitle(target) ? [showTitle(target), 'Vidéo de présentation'] : [target, 'Épisode supprimé'];
   };
   const pageName = (p) => {
     if (PAGE_NAMES[p]) return PAGE_NAMES[p];

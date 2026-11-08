@@ -114,7 +114,7 @@ ok "Serveur Node en marche sur le port $PORT (connexion : réponse 401 attendue 
 
 # ---------------------------------------------------------------- Nginx
 step "6/7 Nginx"
-if grep -q "proxy_pass http://127.0.0.1:$PORT" "$NGINX_FILE" 2>/dev/null; then
+if grep -q "proxy_pass http://127.0.0.1:$PORT" "$NGINX_FILE" 2>/dev/null && grep -q "location = /api/upload/video" "$NGINX_FILE"; then
   ok "Nginx transmet déjà les demandes au serveur Node"
 else
   CERT=/etc/letsencrypt/live/$DOMAIN
@@ -138,6 +138,21 @@ server {
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     client_max_body_size 10m;   # envoi d'images depuis l'administration
+
+    # Envoi de vidéos (2 Go max.) : transmis directement à Node, sans copie temporaire sur le disque de Nginx
+    location = /api/upload/video {
+        client_max_body_size 2100m;
+        client_body_timeout 300s;   # tolère les coupures passagères d'une connexion lente
+        proxy_request_buffering off;
+        proxy_pass http://127.0.0.1:$PORT;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
 
     # Tout passe par le serveur Node : site, API (connexion…), direct /hls/
     location / {

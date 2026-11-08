@@ -189,7 +189,10 @@ export default function Stats({ data, user }) {
     if (target === 'live') return { title: 'Direct', sub: 'Page Regarder' };
     if (target.startsWith('yt:')) return { title: 'Vidéo YouTube', sub: `Sur nos réseaux · ${target.slice(3)}` };
     const ep = episodes.find((e) => e.id === target);
-    if (!ep) return { title: target, sub: 'Épisode supprimé' };
+    if (!ep) {
+      const show = shows.find((s) => s.slug === target);
+      return show ? { title: show.title, sub: 'Vidéo de présentation' } : { title: target, sub: 'Épisode supprimé' };
+    }
     return { title: ep.title.fr, sub: shows.find((s) => s.slug === ep.show)?.title };
   };
   const pageName = (p) => {
