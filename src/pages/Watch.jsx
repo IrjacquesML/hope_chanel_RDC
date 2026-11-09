@@ -6,6 +6,7 @@ import { getShow, isOnAir, scheduleForDay } from '../lib';
 import { useKinshasaClock } from '../hooks/useKinshasaClock';
 import { useLang } from '../i18n/LanguageContext';
 import { useSeo } from '../hooks/useSeo';
+import content from '../data/content.json';
 
 function slotTitle(slot, tr) {
   return (slot.show && getShow(slot.show)?.title) || tr(slot.title) || '';
@@ -25,7 +26,7 @@ export default function Watch() {
       <PageHeader title={t('watch.title')} intro={t('watch.intro')} />
       <section className="container-page grid gap-8 py-12 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <LivePlayer priority />
+          {!content.live.hidden && <LivePlayer priority />}
           {current && (
             <div className="mt-6">
               <p className="text-sm font-semibold uppercase tracking-wide text-red-700">{t('home.nowOnAir')} · {current.start}–{current.end}</p>

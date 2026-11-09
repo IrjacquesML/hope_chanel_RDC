@@ -12,7 +12,7 @@ const HLS_JS = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';
  * Lecteur HLS : natif sur Safari/iOS, hls.js chargé à la demande ailleurs.
  * Démarre seul, sans le son (seule lecture automatique autorisée par les navigateurs) ; un bouton active le son.
  */
-function HlsPlayer({ src, fill }) {
+function HlsPlayer({ src }) {
   const { t } = useLang();
   const ref = useRef(null);
   const [muted, setMuted] = useState(true);
@@ -43,7 +43,7 @@ function HlsPlayer({ src, fill }) {
   };
   return (
     <>
-      <video ref={ref} controls autoPlay muted playsInline onVolumeChange={(e) => setMuted(e.target.muted)} className={`h-full w-full bg-black ${fill ? 'object-cover' : 'object-contain'}`} />
+      <video ref={ref} controls autoPlay muted playsInline onVolumeChange={(e) => setMuted(e.target.muted)} className="h-full w-full bg-black object-contain" />
       {muted && (
         <button type="button" onClick={unmute} className="btn-accent absolute bottom-16 left-1/2 -translate-x-1/2 px-6 py-3 shadow-xl">
           🔊 {t('watch.unmute')}
@@ -56,21 +56,20 @@ function HlsPlayer({ src, fill }) {
 /**
  * Lecteur du direct vMix (via Jet-Stream ou tout flux HLS) : s'affiche et démarre tout seul, sans bouton à cliquer.
  * Quand vMix est relié au site et ne diffuse pas, une image d'attente remplace le lecteur.
- * fill : le lecteur remplit son conteneur (bord à bord, sans coins arrondis) et l'image remplit le lecteur.
  */
-export default function LivePlayer({ sizes = '(min-width: 1024px) 66vw, 100vw', priority = false, fill = false }) {
+export default function LivePlayer({ sizes = '(min-width: 1024px) 66vw, 100vw', priority = false }) {
   const { t } = useLang();
   const { onAir } = useLiveStatus();
   const source = liveSource(content.live);
   const showPlayer = source && onAir !== false;
 
   return (
-    <div className={`relative overflow-hidden bg-ink ${fill ? 'h-full w-full' : 'aspect-video rounded-2xl shadow-xl'}`}>
+    <div className="relative aspect-video overflow-hidden rounded-2xl bg-ink shadow-xl">
       {showPlayer ? (
         source.type === 'embed' ? (
           <iframe title="Hope Channel RDC — direct" src={source.src} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen className="h-full w-full border-0" />
         ) : (
-          <HlsPlayer src={source.src} fill={fill} />
+          <HlsPlayer src={source.src} />
         )
       ) : (
         <>

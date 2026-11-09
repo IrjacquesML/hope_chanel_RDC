@@ -97,6 +97,7 @@ const TABS = [
     file: 'content',
     groups: [
       ['Lecteur du direct vMix (accueil et page « Regarder »)', [
+        { name: 'live.hidden', label: 'Masquer le lecteur du direct sur le site', type: 'checkbox', wide: true, hint: 'Le lecteur disparaît de l’accueil et de la page « Regarder » après avoir cliqué sur Enregistrer. vMix et les réseaux sociaux ne sont pas arrêtés.' },
         { name: 'live.selfHosted', label: 'Lire le direct depuis le serveur du site (MediaMTX)', type: 'checkbox', wide: true, hint: 'Conseillé : vMix envoie au serveur du site (onglet Diffusion → « Diffuser vMix sur le site »), sans plateforme payante. Prioritaire sur les options ci-dessous.' },
         { name: 'live.hlsUrl', label: 'URL du flux HLS (.m3u8)', type: 'url', wide: true, hint: 'Flux HLS d’une plateforme (Jet-Stream…), si vous n’utilisez pas le serveur du site.' },
         { name: 'live.jetstreamEmbedUrl', label: 'URL d’intégration Jet-Stream', wide: true, placeholder: 'https://…  ou  <iframe src="…"></iframe>', hint: 'Autre possibilité : le lecteur Jet-Stream (URL ou code <iframe>). Prioritaire sur l’URL HLS.' },
@@ -195,7 +196,10 @@ function LiveStatus({ live }) {
   const source = liveSource(live);
   let message;
   let tone = 'text-green-800 bg-green-50 ring-green-200';
-  if (live.selfHosted) message = '✓ Serveur du site : le direct envoyé par vMix démarrera seul en tête de l’accueil.';
+  if (live.hidden) {
+    message = 'Lecteur masqué : les visiteurs ne le voient ni sur l’accueil ni sur la page « Regarder ».';
+    tone = 'text-amber-900 bg-amber-50 ring-amber-200';
+  } else if (live.selfHosted) message = '✓ Serveur du site : le direct envoyé par vMix démarrera seul en tête de l’accueil.';
   else if (live.jetstreamEmbedUrl && !parseEmbedUrl(live.jetstreamEmbedUrl)) {
     message = 'URL d’intégration Jet-Stream non reconnue. Collez une adresse en https://… ou le code <iframe> fourni par Jet-Stream.';
     tone = 'text-red-800 bg-red-50 ring-red-200';

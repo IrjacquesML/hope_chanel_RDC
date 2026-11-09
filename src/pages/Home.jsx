@@ -13,14 +13,15 @@ import { useSeo } from '../hooks/useSeo';
 import { publicArticles } from '../articles';
 import content from '../data/content.json';
 
-/** Direct vMix en tête de l'accueil : bord à bord, à la hauteur de l'écran sous l'en-tête, sans texte autour ; il démarre seul. */
+/** Direct vMix en tête de l'accueil, de taille limitée pour laisser voir le reste de la page ; il démarre seul. */
 function LiveNow() {
   const { t } = useLang();
   return (
-    // Hauteur : 16:9 sur toute la largeur, sans dépasser l'écran sous l'en-tête (h-16, puis h-20 en xl)
-    <section aria-labelledby="live-now" className="h-[min(56.25vw,calc(100svh-4rem))] bg-black xl:h-[min(56.25vw,calc(100svh-5rem))]">
+    <section aria-labelledby="live-now" className="container-page pt-8">
       <h2 id="live-now" className="sr-only">{t('common.live')}</h2>
-      <LivePlayer priority fill sizes="100vw" />
+      <div className="mx-auto max-w-4xl">
+        <LivePlayer priority sizes="(min-width: 1024px) 896px, 100vw" />
+      </div>
     </section>
   );
 }
@@ -38,7 +39,7 @@ export default function Home() {
 
   return (
     <>
-      <LiveNow />
+      {!content.live.hidden && <LiveNow />}
 
       <section aria-labelledby="highlights" className="py-16">
         <div className="container-page">
